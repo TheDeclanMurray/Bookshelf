@@ -1,12 +1,13 @@
 /**
- * Tests for the example library in src/prototype/fakeData.js: it should be valid,
+ * Tests for the example library in src/app/fakeData.js: it should be valid,
  * repeatable, and exercise the features the prototype demonstrates.
  * Run with: npm test
  */
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const SL = require('../prototype/shelfLogic');
-const { buildFakeLibrary } = require('../prototype/fakeData');
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { ShelfLogic as SL } from '../../app/shelfLogic';
+import { FakeData } from '../../app/fakeData';
+const { buildFakeLibrary } = FakeData;
 
 const TODAY = '2026-10-19';
 

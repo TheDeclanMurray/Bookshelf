@@ -12,7 +12,7 @@ const SpineLayout = (function () {
   'use strict';
 
   // ----------------------------------------------------------------- constants
-  const SL_LOCAL = (typeof module !== 'undefined' && module.exports) ? require('./shelfLogic') : ShelfLogic;
+  const SL_LOCAL = ShelfLogic;
   const MIN_AUTHOR_WIDTH = 24;                            // thinner spines (in units) leave the author off
   const TOP_SPACE = { gilt: 17, block: 23, stripe: 15, label: 10, plain: 10 };            // room above the title, in units
   const BOTTOM_SPACE = { gilt: 17, default: 11 };                                         // room below, in units, without a sticker

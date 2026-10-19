@@ -1,10 +1,10 @@
 /**
- * Unit tests for src/prototype/poseSolver.js (projecting a 3D face and solving for a pose).
+ * Unit tests for src/app/poseSolver.js (projecting a 3D face and solving for a pose).
  * Run with: npm test
  */
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const PS = require('../prototype/poseSolver');
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { PoseSolver as PS } from '../../app/poseSolver';
 
 const PERSPECTIVE = 1300;
 const W = 183, H = 275, D = 42;

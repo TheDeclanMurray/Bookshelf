@@ -1,10 +1,10 @@
 /**
- * Tests for the marble vein math in src/prototype/texture.js (pure functions; the bitmap itself is browser-only).
+ * Tests for the marble vein math in src/app/texture.js (pure functions; the bitmap itself is browser-only).
  * Run with: npm test
  */
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const { veinStrength, smoothStep, fractalNoise } = require('../prototype/texture');
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { veinStrength, smoothStep, fractalNoise } from '../../app/texture';
 
 test('smoothStep ramps between its edges in either direction and clamps outside them', () => {
   assert.equal(smoothStep(0, 1, -5), 0);
