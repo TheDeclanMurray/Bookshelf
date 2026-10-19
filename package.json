@@ -6,6 +6,21 @@
   "scripts": {
     "test": "node --test \"src/tests/**/*.test.js\" \"src/tests/**/*.test.mjs\"",
     "build:prototype": "node src/prototype/build.mjs",
-    "render:static": "node src/prototype/renderStatic.mjs"
+    "render:static": "node src/prototype/renderStatic.mjs",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "e2e": "playwright test"
+  },
+  "dependencies": {
+    "framer-motion": "^10.18.0",
+    "htm": "^3.1.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.4"
   }
 }
