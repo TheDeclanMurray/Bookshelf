@@ -1,0 +1,11 @@
+{
+  "name": "bookshelf",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Personal media tracker styled as an ornate library",
+  "scripts": {
+    "test": "node --test \"src/tests/**/*.test.js\" \"src/tests/**/*.test.mjs\"",
+    "build:prototype": "node src/prototype/build.mjs",
+    "render:static": "node src/prototype/renderStatic.mjs"
+  }
+}

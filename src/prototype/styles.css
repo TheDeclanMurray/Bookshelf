@@ -1,0 +1,196 @@
+/* Layout concept: a dark library at night. One full-screen swipe track; each screen is a carved bookcase (or the reading stand) scaled to fit the phone. Tapping a spine lifts the book into a fixed overlay stage. Single, deliberate look: no light theme. */
+:root {
+  color-scheme: dark;
+  --room: #130c08;
+  --room-2: #1d130d;
+  --brass: #d4af5f;
+  --brass-dim: #8f7236;
+  --parchment: #efe3c8;
+  --parchment-2: #ddcba2;
+  --ink: #2a1d12;
+  --ink-soft: #62492f;
+  --ember: #e9a45c;
+  --font-display: 'Cinzel', 'Trajan Pro', Georgia, serif;
+  --font-body: 'Crimson Text', Georgia, serif;
+  --font-hand: 'IM Fell English', Georgia, serif;
+  /* wood grain: horizontal streaks from SVG turbulence, drawn as a data URI so no request is made */
+  --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.55' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.3 0 0 0 -0.42'/></filter><rect width='100%' height='100%' filter='url(%23g)' opacity='0.55'/></svg>");
+  /* marble veins: dark filaments from SVG turbulence, tiled, used by the 3D stand */
+  --vein: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='v' x='0' y='0' width='100%' height='100%'><feTurbulence type='turbulence' baseFrequency='0.007 0.017' numOctaves='3' seed='12' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.3  0 0 0 0 0.33  0 0 0 0 0.4  1 0 0 0 0'/><feComponentTransfer><feFuncA type='table' tableValues='0.8 0.28 0 0 0 0 0'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23v)'/></svg>");
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--room);
+  color: #f3ead7;
+  font-family: var(--font-display);
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+#app { position: relative; height: 100%; overflow: hidden; background:
+  radial-gradient(ellipse 80% 55% at 50% 42%, rgba(233, 164, 92, 0.16), transparent 70%),
+  repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 46px),
+  linear-gradient(180deg, var(--room-2), var(--room)); }
+
+/* ------------------------------------------------------------ swipe track */
+.track { display: flex; height: 100%; cursor: grab; }
+.track, .track * { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* every child lets the swipe through */
+.track:active { cursor: grabbing; }
+.slot { flex: none; height: 100%; position: relative; overflow: hidden; }
+.frame { position: absolute; left: 50%; top: 0; transform-origin: top center; }
+
+/* ----------------------------------------------------------------- pager */
+.pager { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 6px max(16px, env(safe-area-inset-left, 0px)) 10px max(16px, env(safe-area-inset-right, 0px)); pointer-events: none; }
+.pips { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: center; pointer-events: auto; }
+.pip { width: 9px; height: 9px; padding: 0; border-radius: 5px; border: 0; background: rgba(212, 175, 95, 0.28); cursor: pointer; transition: width 0.25s, background 0.25s; }
+.pip[aria-current="true"] { width: 22px; background: var(--brass); }
+.pip.is-reading { background: rgba(233, 164, 92, 0.55); }
+.pip.is-reading[aria-current="true"] { background: var(--ember); }
+.hint { font: 600 10px var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: rgba(243, 234, 215, 0.55); transition: opacity 0.6s; text-align: center; }
+.hint.is-hidden { opacity: 0; }
+
+/* -------------------------------------------------------------- bookcase */
+.case { width: 360px; position: relative; --w1: #6a321c; --w2: #4a2314; --w3: #2f160c; --trim: #d4af5f; --back: #1a0f09; --glow: rgba(233,164,92,.25); }
+.case[data-theme="mahogany"]   { --w1:#7a3b22; --w2:#52261a; --w3:#2f160c; --trim:#d9b865; --back:#1b0f0a; }
+.case[data-theme="ebony"]      { --w1:#3a3f46; --w2:#23262b; --w3:#121417; --trim:#86d3da; --back:#0c0e10; }
+.case[data-theme="emerald"]    { --w1:#356049; --w2:#234032; --w3:#13251d; --trim:#cfb26a; --back:#0c1712; }
+.case[data-theme="blackcherry"]{ --w1:#5a1f2a; --w2:#3a121a; --w3:#1f0910; --trim:#b9a27a; --back:#14080b; }
+.case[data-theme="rosewood"]   { --w1:#7c3a45; --w2:#552630; --w3:#311319; --trim:#e6b49c; --back:#1c0e11; }
+.case[data-theme="oak"]        { --w1:#86602f; --w2:#5e4222; --w3:#37250f; --trim:#c9985a; --back:#1c140b; }
+.case[data-theme="walnut"]     { --w1:#5d4331; --w2:#3f2c20; --w3:#22160e; --trim:#cdb98a; --back:#170f0a; }
+.case[data-theme="maple"]      { --w1:#b58a55; --w2:#8a6638; --w3:#5a4021; --trim:#aeb9c2; --back:#2a1e12; }
+.case[data-theme="cherry"]     { --w1:#8a4129; --w2:#5f2c1b; --w3:#36170d; --trim:#dbb36f; --back:#1d0e08; }
+.case[data-theme="teak"]       { --w1:#9a7436; --w2:#6e5226; --w3:#42301a; --trim:#e0cb92; --back:#21170b; }
+.case[data-theme="bleached"]   { --w1:#b9a07a; --w2:#8f7a58; --w3:#5f503a; --trim:#efe5cf; --back:#241b12; }
+.case[data-theme="painted"]    { --w1:#2f7f86; --w2:#1f5a60; --w3:#0f353a; --trim:#f2c94c; --back:#0b2124; }
+.case[data-theme="ash"]        { --w1:#4a4540; --w2:#2f2c29; --w3:#181614; --trim:#948b80; --back:#0e0d0c; }
+
+.wood { background-color: var(--w2); background-image: var(--grain), linear-gradient(90deg, rgba(0,0,0,.32), rgba(255,255,255,.07) 28%, rgba(0,0,0,.05) 60%, rgba(0,0,0,.3)); }
+
+.crown { position: relative; height: 96px; }
+.crown svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.plaque { position: absolute; left: 50%; top: 40px; transform: translateX(-50%); min-width: 176px; max-width: 262px; padding: 5px 16px 6px; text-align: center; border-radius: 3px;
+  background: linear-gradient(180deg, #ecd28b, #b99340 52%, #dcbc6a); color: #2b1c0a;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), inset 0 -2px 3px rgba(0,0,0,.35), 0 4px 8px rgba(0,0,0,.55); }
+.plaque-title { font: 700 14px/1.15 var(--font-display); letter-spacing: 0.12em; text-transform: uppercase; text-shadow: 0 1px 0 rgba(255,255,255,.45); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plaque-sub { white-space: nowrap; font: 600 8.5px/1.4 var(--font-display); letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.78; }
+.sort-btn { position: absolute; right: 18px; top: 54px; width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(0,0,0,.4); cursor: pointer;
+  background: radial-gradient(circle at 35% 30%, #f1da9a, #b08a38 70%); color: #2b1c0a; font: 700 13px/1 var(--font-display);
+  box-shadow: 0 2px 4px rgba(0,0,0,.6), inset 0 1px 1px rgba(255,255,255,.5); }
+.sort-btn:active { transform: translateY(1px); }
+
+.case-body { display: flex; position: relative; }
+/* When the frame is a photograph these keep the same spacing but draw nothing */
+.case-frame { position: absolute; max-width: none; max-height: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.pilaster-space { width: 28px; flex: none; }
+.board-space { height: 14px; flex: none; }
+.plinth-space { height: 34px; }
+.case.is-photo .interior { background: none; box-shadow: none; }
+.pilaster { width: 28px; flex: none; position: relative; }
+.pilaster::before { content: ""; position: absolute; left: 4px; right: 4px; top: 16px; bottom: 16px;
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,.45) 0 1.5px, rgba(255,255,255,.12) 1.5px 3.5px, rgba(0,0,0,.2) 3.5px 6px, transparent 6px 7px); }
+.pilaster .cap, .pilaster .foot { position: absolute; left: -2px; right: -2px; height: 14px; border-radius: 2px; background-color: var(--w1);
+  background-image: var(--grain); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 -2px 2px rgba(0,0,0,.4), 0 2px 3px rgba(0,0,0,.5); }
+.pilaster .cap { top: 0; } .pilaster .foot { bottom: 0; }
+.stud { position: absolute; left: 50%; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff1be, var(--trim) 55%, #5f4a1c); box-shadow: 0 1px 2px rgba(0,0,0,.7); }
+
+.interior { flex: 1; min-width: 0; background: var(--back) var(--grain);
+  box-shadow: inset 0 16px 18px -8px rgba(0,0,0,.85), inset 9px 0 14px -8px rgba(0,0,0,.8), inset -9px 0 14px -8px rgba(0,0,0,.8); }
+.shelf { height: 190px; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 7px; position: relative; }
+.books { display: flex; align-items: flex-end; gap: 1px; height: 176px; }
+.board { height: 14px; flex: none; margin: 0 -7px; border-radius: 1px; background-color: var(--w1); background-image: var(--grain), linear-gradient(180deg, rgba(255,255,255,.18), rgba(0,0,0,.28));
+  box-shadow: 0 7px 9px -2px rgba(0,0,0,.65), inset 0 1px 0 rgba(255,255,255,.3); }
+
+.plinth { height: 34px; margin: 0 -6px; position: relative; border-radius: 2px; box-shadow: 0 10px 18px rgba(0,0,0,.55); }
+.plinth::before { content: ""; position: absolute; inset: 0; border-radius: 2px; background-color: var(--w2); background-image: var(--grain), linear-gradient(180deg, rgba(255,255,255,.14), rgba(0,0,0,.4)); }
+.plinth::after { content: ""; position: absolute; left: 10px; right: 10px; top: 9px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--trim) 35%, transparent); }
+
+/* ----------------------------------------------------------------- spines */
+.spine { position: relative; flex: none; padding: 0; border: 0; border-radius: 2px 2px 0 0; cursor: pointer; background: none; }
+.spine.is-out { visibility: hidden; }
+.spine-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; -webkit-user-drag: none; }
+
+/* ------------------------------------------------------------ reading room */
+.reading { width: 360px; height: 700px; position: relative; }
+.reading-label { position: absolute; top: 14px; left: 0; right: 0; text-align: center; font: 600 11px var(--font-display); letter-spacing: 0.32em; text-transform: uppercase; color: var(--brass); }
+.reading-label::after { content: ""; display: block; margin: 8px auto 0; width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--brass-dim), transparent); }
+.scene { position: absolute; left: 0; top: 74px; width: 360px; height: 470px; perspective: 1100px; perspective-origin: 50% 38%; }
+.stand-glow { position: absolute; left: -40px; top: 10px; width: 440px; height: 440px; border-radius: 50%; background: radial-gradient(circle, rgba(233,164,92,.26), rgba(233,164,92,0) 68%); }
+.stand-anchor { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
+.stand3d { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.f3-group { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.stand-image { position: absolute; max-width: none; max-height: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.f3 { position: absolute; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.f3-edge { box-shadow: inset 0 0 0 0.6px rgba(40, 44, 56, .35); }
+.floor-shadow { position: absolute; left: -170px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65), rgba(0,0,0,0) 66%); }
+.rest-book { position: absolute; transform-style: preserve-3d; transform-origin: 50% 100%; transition: opacity 0.14s; }
+.rest-book.is-out { opacity: 0; pointer-events: none; }
+.rest-book .tap-ring { position: absolute; inset: 4px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out 3;   /* three pulses, then rest: an endless animation keeps the page producing frames */ pointer-events: none; }
+@keyframes tapPulse { 0% { opacity: .0; transform: scale(.97); } 25% { opacity: .75; } 100% { opacity: 0; transform: scale(1.07); } }
+.reading-info { position: absolute; left: 24px; right: 24px; top: 560px; text-align: center; }
+.reading-title { font: 700 21px/1.2 var(--font-display); color: #f3ead7; letter-spacing: 0.04em; text-wrap: balance; }
+.reading-author { margin-top: 4px; font: italic 500 16px var(--font-body); color: var(--parchment-2); }
+.reading-meta { margin-top: 10px; font: 600 10px var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: var(--brass); }
+.reading-empty { position: absolute; left: 30px; right: 30px; top: 300px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
+
+/* ------------------------------------------------------------------- stage */
+.stage { position: fixed; inset: 0; z-index: 50; touch-action: none; }   /* perspective is set from bookStage.js */
+.stage-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, rgba(30,18,10,.72), rgba(6,3,2,.93)); opacity: 0; transition: opacity 0.3s ease-out; }
+.stage-dim.is-on { opacity: 1; }
+.stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; transform-style: preserve-3d; }   /* preserve-3d lets the book receive the stage's perspective */
+.corner { position: absolute; width: 0; height: 0; pointer-events: none; }
+.book3d { position: absolute; transform-style: preserve-3d; will-change: transform; }   /* never opacity: that would flatten the 3D book */
+.book-lift { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.hinge { position: absolute; inset: 0; transform-origin: 0% 50%; transform-style: preserve-3d; will-change: transform; }
+.face { position: absolute; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
+.cover-face { cursor: pointer; }
+.cover-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, rgba(255,255,255,.22), rgba(255,255,255,0) 34%, rgba(0,0,0,.18)); }
+.cover-crease { position: absolute; left: 4.5%; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,.35); box-shadow: 1px 0 0 rgba(255,255,255,.14); pointer-events: none; }
+.page-edge { background-color: #e9dfc6; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px), linear-gradient(90deg, rgba(0,0,0,.25), rgba(0,0,0,0) 30%, rgba(0,0,0,.2)); }
+.page-edge::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-color: rgba(14, 9, 5, 0); transition: background-color 0.4s ease-out; }
+.book3d.in-slot .page-edge::after { background-color: rgba(14, 9, 5, 0.86); }   /* in the shelf the page edges are in shadow; not opacity, which would flatten the 3D book */
+.page-edge.h { background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,0) 40%, rgba(0,0,0,.2)); }
+.stage-close { position: absolute; top: max(14px, env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 3; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--brass-dim);
+  background: rgba(0,0,0,.45); color: var(--brass); font: 400 22px/1 var(--font-display); cursor: pointer; display: grid; place-items: center; }
+.stage-hint { position: absolute; left: 0; right: 0; bottom: max(26px, env(safe-area-inset-bottom, 0px)); text-align: center; z-index: 3; pointer-events: none;
+  font: 600 10px var(--font-display); letter-spacing: 0.24em; text-transform: uppercase; color: rgba(243,234,215,.7); }
+
+/* ------------------------------------------------------------------- pages */
+.paper { position: absolute; inset: 0; color: var(--ink); background-color: var(--parchment);
+  background-image: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.35), transparent 70%), linear-gradient(90deg, rgba(60,36,12,.0), rgba(60,36,12,.0)); font-family: var(--font-body); }
+.paper.left { background-image: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.35), transparent 70%), linear-gradient(90deg, rgba(60,36,12,.0) 70%, rgba(60,36,12,.24)); }
+.paper.right { background-image: radial-gradient(ellipse at 50% 40%, rgba(255,255,255,.35), transparent 70%), linear-gradient(270deg, rgba(60,36,12,.0) 80%, rgba(60,36,12,.0)), linear-gradient(90deg, rgba(60,36,12,.24), rgba(60,36,12,0) 14%); }
+.paper-inner { position: absolute; inset: 0; padding: 9% 9% 7% 9%; display: flex; flex-direction: column; gap: 0.7em; overflow: hidden; }
+.paper.left .paper-inner { padding-right: 12%; } .paper.right .paper-inner { padding-left: 12%; }
+.pg-kicker { font: 600 0.62em var(--font-display); letter-spacing: 0.26em; text-transform: uppercase; color: var(--ink-soft); }
+.pg-title { font: 700 1.2em/1.15 var(--font-display); color: var(--ink); text-wrap: balance; }
+.pg-author { font: italic 500 1em var(--font-body); color: var(--ink-soft); margin-top: -0.35em; }
+.pg-rule { height: 1px; background: linear-gradient(90deg, rgba(98,73,47,.65), rgba(98,73,47,0)); flex: none; }
+.pg-text { font: 500 1em/1.42 var(--font-body); margin: 0; hyphens: auto; }
+.pg-text.dropcap::first-letter { font: 700 2.6em/0.8 var(--font-display); float: left; padding: 0.06em 0.08em 0 0; color: #7a3b22; }
+.pg-note { font: italic 500 0.95em/1.4 var(--font-hand); color: var(--ink-soft); border-left: 2px solid rgba(122,59,34,.5); padding-left: 0.6em; margin: 0; }
+.pg-num { margin-top: auto; text-align: center; font: 500 0.78em var(--font-display); color: var(--ink-soft); letter-spacing: 0.14em; flex: none; }
+.stars { display: flex; gap: 0.18em; font-size: 1.35em; line-height: 1; }
+.star { color: rgba(98,73,47,.28); } .star.on { color: #b5802a; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 0.35em 0.9em; margin: 0; font-size: 0.92em; }
+.facts dt { font: 600 0.72em var(--font-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft); align-self: center; }
+.facts dd { margin: 0; }
+.status-chip { display: inline-block; padding: 0.05em 0.6em; border-radius: 1em; border: 1px solid currentColor; font: 600 0.72em var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; }
+.status-chip.st-read { color: #2f6b45; } .status-chip.st-dnf { color: #8a3a2a; } .status-chip.st-tbr { color: #3d5a80; } .status-chip.st-reading { color: #8a5a14; }
+.series-dots { display: flex; gap: 0.3em; margin-top: 0.3em; flex-wrap: wrap; }
+.series-dots i { width: 0.7em; height: 0.7em; border-radius: 50%; border: 1px solid var(--ink-soft); }
+.series-dots i.have { background: var(--ink-soft); } .series-dots i.here { background: #b5802a; border-color: #7a4f12; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tap-ring { animation: none; }
+}
+
+/* renderStatic.mjs photographs the stand and the bookcase frames on a transparent background */
+html.render-static, html.render-static body, html.render-static #app { background: transparent !important; }
