@@ -43,7 +43,8 @@ button { font: inherit; color: inherit; }
   linear-gradient(180deg, var(--room-2), var(--room)); }
 
 /* ------------------------------------------------------------ swipe track */
-.track { display: flex; height: 100%; touch-action: pan-y; cursor: grab; }
+.track { display: flex; height: 100%; cursor: grab; }
+.track, .track * { touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* every child lets the swipe through */
 .track:active { cursor: grabbing; }
 .slot { flex: none; height: 100%; position: relative; overflow: hidden; }
 .frame { position: absolute; left: 50%; top: 0; transform-origin: top center; }
@@ -111,8 +112,7 @@ button { font: inherit; color: inherit; }
 .plinth::after { content: ""; position: absolute; left: 10px; right: 10px; top: 9px; height: 10px; border-radius: 2px; border: 1px solid rgba(0,0,0,.35); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--trim) 35%, transparent); }
 
 /* ----------------------------------------------------------------- spines */
-.spine { position: relative; flex: none; padding: 0; border: 0; border-radius: 2px 2px 0 0; cursor: pointer; background: none; transition: transform 0.14s ease-out; }
-.spine:hover, .spine:active { transform: translateY(-5px); }
+.spine { position: relative; flex: none; padding: 0; border: 0; border-radius: 2px 2px 0 0; cursor: pointer; background: none; }
 .spine.is-out { visibility: hidden; }
 .spine-art { position: absolute; inset: 0; overflow: hidden; border-radius: 2px 2px 0 0; }
 .spine-art::before { content: ""; position: absolute; inset: 0; background-image: var(--cloth); mix-blend-mode: multiply; opacity: .7; }
@@ -129,9 +129,6 @@ button { font: inherit; color: inherit; }
 .reading { width: 360px; height: 700px; position: relative; }
 .reading-label { position: absolute; top: 14px; left: 0; right: 0; text-align: center; font: 600 11px var(--font-display); letter-spacing: 0.32em; text-transform: uppercase; color: var(--brass); }
 .reading-label::after { content: ""; display: block; margin: 8px auto 0; width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--brass-dim), transparent); }
-.style-toggle { position: absolute; top: 40px; right: 10px; z-index: 3; display: flex; border: 1px solid var(--brass-dim); border-radius: 14px; overflow: hidden; background: rgba(0,0,0,.35); }
-.style-toggle button { border: 0; background: none; padding: 5px 12px; font: 600 10px var(--font-display); letter-spacing: 0.16em; text-transform: uppercase; color: rgba(243,234,215,.65); cursor: pointer; }
-.style-toggle button[aria-pressed="true"] { background: var(--brass); color: #2b1c0a; }
 .scene { position: absolute; left: 0; top: 74px; width: 360px; height: 470px; perspective: 900px; }
 .scene svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .reading-book { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; transform-style: preserve-3d; }
@@ -143,9 +140,6 @@ button { font: inherit; color: inherit; }
 .reading-author { margin-top: 4px; font: italic 500 16px var(--font-body); color: var(--parchment-2); }
 .reading-meta { margin-top: 10px; font: 600 10px var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: var(--brass); }
 .reading-empty { position: absolute; left: 30px; right: 30px; top: 300px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
-.steam { animation: steam 3.4s ease-in-out infinite; transform-origin: bottom center; }
-.steam.b { animation-delay: 1.5s; }
-@keyframes steam { 0% { opacity: 0; transform: translateY(4px) scaleY(.8); } 40% { opacity: .55; } 100% { opacity: 0; transform: translateY(-14px) scaleY(1.15); } }
 
 /* ------------------------------------------------------------------- stage */
 .stage { position: fixed; inset: 0; z-index: 50; perspective: 1300px; perspective-origin: 50% 46%; touch-action: none; }
@@ -190,8 +184,7 @@ button { font: inherit; color: inherit; }
 .series-dots i.have { background: var(--ink-soft); } .series-dots i.here { background: #b5802a; border-color: #7a4f12; }
 
 @media (prefers-reduced-motion: reduce) {
-  .steam, .tap-ring { animation: none; }
-  .spine { transition: none; }
+  .tap-ring { animation: none; }
 }
 
 </style>
@@ -230,6 +223,9 @@ const ShelfLogic = (function () {
     'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
   const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const MS_PER_DAY = 86400000;
+  const STICKER_MIN_PX = 11;            // smallest series number sticker (in 150px-spine units)
+  const STICKER_MAX_PX = 17;            // largest series number sticker
+  const STICKER_MARGIN_PX = 4;          // space kept between a sticker and the spine edges
 
   /** Reading statuses a book can have. */
   const STATUSES = ['reading', 'read', 'dnf', 'tbr'];
@@ -671,6 +667,34 @@ const ShelfLogic = (function () {
     return Math.min(max, Math.max(min, value));
   }
 
+  /**
+   * One sticker style per series, so every volume carries the same number sticker:
+   * same size, same background, same number color. The size fits the thinnest
+   * volume in the series, so it fits all of them. Standalones get no entry.
+   * @param {Object[]} books - Every book in the library
+   * @returns {Object<string, {size: number, bg: string, text: string, ring: string}>} Style by series name
+   */
+  function buildSeriesStyles(books) {
+    const bySeries = {};
+    for (const book of books) {
+      if (!book.series || !book.seriesNumber) continue;   // only numbered series books get stickers
+      (bySeries[book.series] = bySeries[book.series] || []).push(book);
+    }
+    const styles = {};
+    for (const [name, volumes] of Object.entries(bySeries)) {
+      const thinnest = Math.min(...volumes.map((b) => spineThickness(b.pages)));
+      const first = volumes.reduce((a, b) => (b.seriesNumber < a.seriesNumber ? b : a));   // volume 1 sets the color
+      const complement = (first.hue + 180) % 360;         // opposite hue stands out against the spines
+      styles[name] = {
+        size: clamp(thinnest - STICKER_MARGIN_PX, STICKER_MIN_PX, STICKER_MAX_PX),
+        bg: `hsl(${complement}, 45%, 84%)`,
+        text: `hsl(${first.hue}, 55%, 14%)`,
+        ring: `hsl(${complement}, 40%, 36%)`,
+      };
+    }
+    return styles;
+  }
+
   return {
     // constants other files read
     GENRES, SPECIAL_GROUPS, SORT_MODES, STATUSES, AGES,
@@ -679,7 +703,7 @@ const ShelfLogic = (function () {
     hashString, seededRandom, spineThickness, spineHeight, hslToRgb, relativeLuminance,
     readableTextColor, spinePalette, titleSortKey, authorSortKey, compareLibraryOrder, sortBooks,
     nextSortMode, packIntoCases, toRoman, caseTitle, groupBooks, buildRooms, genreOf, seriesLabel,
-    daysBetween, formatShortDate, todayIso, clamp,
+    daysBetween, formatShortDate, todayIso, clamp, buildSeriesStyles,
   };
 })();
 
@@ -968,7 +992,7 @@ if (typeof module !== 'undefined' && module.exports) {
  */
 const SL = ShelfLogic;                                    // short alias used by every UI file
 const html = htm.bind(React.createElement);               // html`<div className="x"/>` makes React elements
-const { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, memo } = React;
+const { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, memo } = React;
 const { motion, animate, useMotionValue, MotionConfig } = Motion;
 
 /**
@@ -976,6 +1000,30 @@ const { motion, animate, useMotionValue, MotionConfig } = Motion;
  * on a spine after a swipe does not count as a tap on that book.
  */
 const DragGuard = { dragging: false };
+
+/** Sticker styles per series name (built once from the whole library in app.js). */
+const SeriesStyleContext = React.createContext({});
+
+const TAP_SLOP_PX = 10;                                   // a finger that moves further than this between down and up is a swipe, not a tap
+const TapTracker = { x: 0, y: 0 };                        // where the latest press started
+
+/**
+ * Remembers where a press began; call from onPointerDown.
+ * @param {PointerEvent} event - The pointer-down event
+ */
+function noteTapStart(event) {
+  TapTracker.x = event.clientX;
+  TapTracker.y = event.clientY;
+}
+
+/**
+ * Tells a real tap from the end of a swipe; call from onClick.
+ * @param {MouseEvent} event - The click event
+ * @returns {boolean} True when the press barely moved and no drag is in progress
+ */
+function isRealTap(event) {
+  return !DragGuard.dragging && Math.hypot(event.clientX - TapTracker.x, event.clientY - TapTracker.y) <= TAP_SLOP_PX;
+}
 
 /**
  * art.js
@@ -990,8 +1038,6 @@ const COVER_VIEW_W = 200;                                 // cover drawing coord
 const COVER_VIEW_H = 300;                                 // cover drawing coordinate height
 const COVER_STARS = [[24, 150, 1.4], [170, 140, 1.2], [60, 176, 1], [150, 168, 1.6], [100, 152, 1], [36, 112, 1.2], [176, 98, 1.4]];
 const SPINE_MIN_AUTHOR_WIDTH = 24;                        // thinner spines leave the author off
-const SPINE_MIN_ROUNDEL_WIDTH = 20;                       // thinner spines leave the series number off
-const SPINE_ROUNDEL_MAX = 17;                             // series roundel diameter (in 150px-spine units)
 
 /**
  * Cover colors derived from a hue.
@@ -1082,24 +1128,27 @@ function CoverArt({ book, width, height }) {
 }
 
 /**
- * A generated spine. Everything is sized from `width` and `height`, so the same
- * spine drawn bigger (on the 3D book) looks identical to the one on the shelf.
- * @param {{book: Object, width: number, height: number}} props - Book and spine size in px
+ * A generated spine. Decoration sizes use `unit` (px per design unit), so the same
+ * spine drawn bigger on the 3D book looks identical to the one on the shelf, and
+ * stickers and bands line up between books of different heights on a shelf.
+ * @param {{book: Object, width: number, height: number, unit?: number}} props - Book, spine size in px, and px per design unit (1 on a shelf)
  * @returns {React.ReactElement} Spine element filling its parent
  */
-function SpineArt({ book, width, height }) {
+function SpineArt({ book, width, height, unit = 1 }) {
   const genre = SL.genreOf(book);
   const pal = useMemo(() => SL.spinePalette(book), [book]);
-  const u = height / SL.SPINE_BASE_HEIGHT_PX;             // one "unit": sizes scale with the spine
+  const seriesStyles = useContext(SeriesStyleContext);
+  const sticker = book.series && book.seriesNumber ? seriesStyles[book.series] : undefined;   // same for every volume
+  const u = unit;                                         // one design unit in px; the same for every book on a shelf
   const w = width / u;                                    // width measured in units
   const style = genre.spineStyle;
   const hasAuthor = w >= SPINE_MIN_AUTHOR_WIDTH;
-  const hasRoundel = !!(book.series && book.seriesNumber) && w >= SPINE_MIN_ROUNDEL_WIDTH;
-  const roundelD = Math.min(w - 6, SPINE_ROUNDEL_MAX) * u;
+  const hasRoundel = !!sticker;
+  const roundelD = hasRoundel ? sticker.size * u : 0;      // size is shared by the whole series
 
   // Vertical layout, in units: decoration at the top, title, author, then series roundel and bottom decoration
   const top = (style === 'gilt' ? 17 : style === 'block' ? 23 : style === 'stripe' ? 15 : 10) * u;
-  const bottom = (hasRoundel ? 34 : (style === 'gilt' ? 17 : 11)) * u;
+  const bottom = (hasRoundel ? sticker.size + 21 : (style === 'gilt' ? 17 : 11)) * u;
   const region = height - top - bottom;
   const surname = book.author.split(' ').pop();
   const titleFit = (titleHeight) => titleHeight / (book.title.length * 0.6);   // largest font that keeps the title on one line
@@ -1129,8 +1178,8 @@ function SpineArt({ book, width, height }) {
       textShadow: onLabel ? 'none' : '0 1px 1px rgba(0,0,0,.45)' }}>${book.title}</div>
     ${authorH > 0 && html`<div className="sp-author" style=${{ top: top + titleH + 4 * u, height: authorH, fontFamily: 'var(--font-display)',
       fontSize: Math.min(width * 0.3, 9.5 * u, authorH / (surname.length * 0.85)), color: pal.text, opacity: 0.8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>${surname}</div>`}
-    ${hasRoundel && html`<div className="sp-roundel" style=${{ bottom: (style === 'gilt' ? 16 : 11) * u, width: roundelD, height: roundelD, background: pal.accent,
-      color: pal.isLight ? '#f3ead7' : '#2b1c0a', fontSize: roundelD * 0.62, fontFamily: 'var(--font-display)', boxShadow: '0 1px 2px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.3)' }}>${book.seriesNumber}</div>`}
+    ${hasRoundel && html`<div className="sp-roundel" style=${{ bottom: (style === 'gilt' ? 16 : 11) * u, width: roundelD, height: roundelD, background: sticker.bg,
+      color: sticker.text, fontSize: roundelD * 0.64, fontFamily: 'var(--font-display)', boxShadow: `0 0 0 ${Math.max(0.6, 0.9 * u)}px ${sticker.ring}, 0 1px 2px rgba(0,0,0,.5)` }}>${book.seriesNumber}</div>`}
   </div>`;
 }
 
@@ -1183,11 +1232,11 @@ function Pilaster() {
 const SpineButton = memo(function SpineButton({ placed, isOut, onPick }) {
   const { book, thickness, height } = placed;
   const handleClick = (event) => {
-    if (DragGuard.dragging) return;                       // ignore the tap that ends a swipe
+    if (!isRealTap(event)) return;                        // ignore the touch that ends a swipe
     onPick(book, event.currentTarget);
   };
   return html`<button className=${'spine' + (isOut ? ' is-out' : '')} style=${{ width: thickness, height }}
-    aria-label=${`${book.title} by ${book.author}`} onClick=${handleClick}>
+    aria-label=${`${book.title} by ${book.author}`} onPointerDown=${noteTapStart} onClick=${handleClick}>
     <${SpineArt} book=${book} width=${thickness} height=${height} />
   </button>`;
 });
@@ -1229,108 +1278,144 @@ function Bookcase({ room, pickedId, onPick, onCycleSort }) {
 
 /**
  * readingRoom.js
- * The start screen: the book you are reading, resting on an ornate lectern (stand)
- * or lying on a desk beside a lamp. A toggle switches between the two so both
- * can be judged in the prototype.
+ * The start screen: the book you are reading, resting on an intricately carved
+ * marble lectern with a brass ledge. The stand is drawn in SVG (marble veining
+ * comes from an SVG noise filter); the book is a real element so tapping it can
+ * lift it onto the stage.
  */
 
 // ----------------------------------------------------------------- constants
-const READING_COVER_W = 150;                              // cover size on the stand and desk, in frame px
+const READING_COVER_W = 150;                              // cover size on the stand, in frame px
 const READING_COVER_H = 225;
 const STAND_TILT_DEG = 9;                                 // how far the book leans back on the lectern
-const DESK_TILT_DEG = 58;                                 // how flat the book lies on the desk
-const DESK_GRAIN_XS = Array.from({ length: 13 }, (_, i) => -60 + i * 40);   // desk grain line start positions
+const READING_COVER_TOP = 33;                             // where the cover sits inside the scene
+const CARVE = 'rgba(64, 68, 80, 0.62)';                   // carved grooves
+const HIGHLIGHT = 'rgba(255, 255, 255, 0.8)';             // light catching a carved edge
+const FLUTE_XS = [168, 172.5, 177, 181.5, 186, 190.5, 195];   // column flute positions
+const EGG_XS = Array.from({ length: 7 }, (_, i) => 149 + i * 10.3);   // egg-and-dart molding under the capital
+const STAND_DENTIL_XS = Array.from({ length: 21 }, (_, i) => 70 + i * 11.2); // small blocks under the slab
+const BEAD_XS = Array.from({ length: 31 }, (_, i) => 62 + i * 8.2);   // row of beads along the slab's edge
 
 /**
- * Lectern illustration: carved wooden stand with brass ledge, drawn behind the book.
- * @returns {React.ReactElement} SVG scene
+ * An Ionic scroll (volute) made of nested arcs.
+ * @param {{cx: number, cy: number, flip: boolean}} props - Center, and whether to mirror it
+ * @returns {React.ReactElement} SVG group
  */
-function StandScene() {
-  const wood = { fill: 'url(#wood)' };
-  const foot = (flip) => html`<path d=${flip ? 'M 180 410 C 210 410 240 418 264 446 C 270 452 260 456 250 452 C 226 440 204 436 180 436 Z'
-    : 'M 180 410 C 150 410 120 418 96 446 C 90 452 100 456 110 452 C 134 440 156 436 180 436 Z'} ...${wood} stroke="rgba(0,0,0,.5)" />`;
-  return html`<svg viewBox="0 0 360 470" aria-hidden="true">
-    <defs>
-      <linearGradient id="wood" x1="0" x2="1"><stop offset="0" stopColor="#3b1c0f" /><stop offset="0.35" stopColor="#7a3b22" /><stop offset="0.7" stopColor="#4a2314" /><stop offset="1" stopColor="#2a130a" /></linearGradient>
-      <linearGradient id="brass" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f1da9a" /><stop offset="0.5" stopColor="#b08a38" /><stop offset="1" stopColor="#e1c576" /></linearGradient>
-      <radialGradient id="standGlow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#e9a45c" stopOpacity="0.28" /><stop offset="1" stopColor="#e9a45c" stopOpacity="0" /></radialGradient>
-    </defs>
-    <ellipse cx="180" cy="190" rx="200" ry="200" fill="url(#standGlow)" />
-    <ellipse cx="180" cy="452" rx="124" ry="12" fill="rgba(0,0,0,.55)" />
-    ${foot(false)}${foot(true)}
-    <rect x="168" y="326" width="24" height="90" ...${wood} />
-    <ellipse cx="180" cy="352" rx="21" ry="7" ...${wood} stroke="rgba(0,0,0,.45)" /><ellipse cx="180" cy="378" rx="16" ry="6" ...${wood} stroke="rgba(0,0,0,.45)" />
-    <ellipse cx="180" cy="404" rx="23" ry="8" ...${wood} stroke="rgba(0,0,0,.45)" /><ellipse cx="180" cy="326" rx="32" ry="8" ...${wood} stroke="rgba(0,0,0,.5)" />
-    <polygon points="62,300 298,300 276,258 84,258" fill="#52261a" stroke="rgba(0,0,0,.5)" />
-    <rect x="62" y="300" width="236" height="16" rx="2" ...${wood} stroke="rgba(0,0,0,.5)" />
-    <rect x="90" y="288" width="180" height="9" rx="2" fill="url(#brass)" stroke="rgba(0,0,0,.4)" />
-    <circle cx="76" cy="308" r="2.6" fill="url(#brass)" /><circle cx="284" cy="308" r="2.6" fill="url(#brass)" />
-    <path d="M 100 308 H 260" stroke="#d4af5f" strokeWidth="0.8" opacity="0.5" />
-  </svg>`;
+function Volute({ cx, cy, flip }) {
+  const dir = flip ? -1 : 1;
+  const sweep = flip ? 0 : 1;                             // arcs turn the other way when mirrored
+  return html`<g fill="none" stroke=${CARVE} strokeWidth="1.1">
+    <circle cx=${cx} cy=${cy} r="11" fill="url(#marbleFace)" stroke=${CARVE} />
+    <path d=${`M ${cx + 9 * dir} ${cy - 2} a 9 9 0 1 ${sweep} ${-9 * dir} -7 a 6 6 0 1 ${sweep} ${6 * dir} 6 a 3.2 3.2 0 1 ${sweep} ${-3 * dir} -3`} />
+    <circle cx=${cx} cy=${cy} r="1.6" fill="#d9b865" stroke="none" />
+    <circle cx=${cx} cy=${cy} r="11" stroke=${HIGHLIGHT} strokeWidth="0.6" transform=${`translate(-0.6 -0.6)`} opacity="0.7" />
+  </g>`;
 }
 
 /**
- * Desk illustration: wooden desk top in perspective, lamp glow, tea, and glasses.
+ * The marble lectern drawn behind the book: stepped plinth, fluted baluster column,
+ * Ionic capital, carved relief panel, and a brass ledge for the book to rest on.
  * @returns {React.ReactElement} SVG scene
  */
-function DeskScene() {
+function MarbleStand() {
   return html`<svg viewBox="0 0 360 470" aria-hidden="true">
     <defs>
-      <linearGradient id="deskTop" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#6b3519" /><stop offset="1" stopColor="#2e160b" /></linearGradient>
-      <linearGradient id="deskFade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#130c08" stopOpacity="0" /><stop offset="1" stopColor="#130c08" stopOpacity="1" /></linearGradient>
-      <linearGradient id="deskBrass" x1="0" x2="1"><stop offset="0" stopColor="#8f7236" /><stop offset="0.5" stopColor="#f1da9a" /><stop offset="1" stopColor="#8f7236" /></linearGradient>
-      <radialGradient id="lampGlow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#ffd08a" stopOpacity="0.42" /><stop offset="1" stopColor="#ffd08a" stopOpacity="0" /></radialGradient>
-      <filter id="blur6"><feGaussianBlur stdDeviation="6" /></filter>
+      <linearGradient id="marbleFace" x1="0" x2="1"><stop offset="0" stopColor="#b8bcc4" /><stop offset="0.2" stopColor="#ebe9e5" /><stop offset="0.5" stopColor="#f8f6f2" /><stop offset="0.82" stopColor="#dcdad6" /><stop offset="1" stopColor="#a4a8b0" /></linearGradient>
+      <linearGradient id="marbleTop" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#d6d4cf" /><stop offset="1" stopColor="#fbf9f5" /></linearGradient>
+      <linearGradient id="marbleShade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f5f3ef" /><stop offset="1" stopColor="#bdc0c7" /></linearGradient>
+      <radialGradient id="marbleBall" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stopColor="#ffffff" /><stop offset="1" stopColor="#aeb2ba" /></radialGradient>
+      <linearGradient id="standBrass" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f1da9a" /><stop offset="0.5" stopColor="#b08a38" /><stop offset="1" stopColor="#e1c576" /></linearGradient>
+      <radialGradient id="standGlow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#e9a45c" stopOpacity="0.26" /><stop offset="1" stopColor="#e9a45c" stopOpacity="0" /></radialGradient>
+      <filter id="marbleVeins" x="-5%" y="-5%" width="110%" height="110%">
+        <feTurbulence type="turbulence" baseFrequency="0.011 0.03" numOctaves="4" seed="12" result="noise" />
+        <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.36  0 0 0 0 0.39  0 0 0 0 0.44  1 0 0 0 0" result="tinted" />
+        <feComponentTransfer in="tinted" result="veinAlpha"><feFuncA type="table" tableValues="0.85 0.3 0 0 0 0 0" /></feComponentTransfer>
+        <feComposite in="veinAlpha" in2="SourceAlpha" operator="in" result="veins" />
+        <feMerge><feMergeNode in="SourceGraphic" /><feMergeNode in="veins" /></feMerge>
+      </filter>
     </defs>
-    <rect x="-300" y="-300" width="960" height="556" fill="rgba(0,0,0,.18)" />
-    <polygon points="0,252 360,252 424,470 -64,470" fill="url(#deskTop)" />
-    <g stroke="rgba(0,0,0,.2)" strokeWidth="1.2">${DESK_GRAIN_XS.map((x) => html`<line key=${x} x1=${x} y1="470" x2=${180 + (x - 180) * 0.42} y2="252" />`)}</g>
-    <path d="M 0 252 H 360" stroke="rgba(255,226,170,.22)" strokeWidth="1.5" />
-    <polygon points="96,176 142,170 340,320 130,320" fill="rgba(255,214,150,.09)" />
-    <rect x="-140" y="400" width="640" height="75" fill="url(#deskFade)" />
-    <ellipse cx="190" cy="380" rx="96" ry="26" fill="rgba(0,0,0,.55)" filter="url(#blur6)" />
-    <ellipse cx="58" cy="270" rx="24" ry="6.5" fill="#1a0f09" /><ellipse cx="58" cy="267" rx="22" ry="5.5" fill="url(#deskBrass)" />
-    <path d="M 58 266 V 192 L 98 154" stroke="url(#deskBrass)" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-    <polygon points="70,140 132,126 142,168 84,180" fill="#1f5a45" stroke="#0f2f25" /><ellipse cx="112" cy="174" rx="26" ry="5" fill="#ffe2b0" opacity="0.85" />
-    <circle cx="110" cy="176" r="190" fill="url(#lampGlow)" />
-    <path d="M 290 304 L 290 274 Q 290 266 298 266 L 326 266 Q 334 266 334 274 L 334 304 Q 334 312 312 312 Q 290 312 290 304 Z" fill="#e9dfc6" stroke="rgba(0,0,0,.4)" />
-    <path d="M 334 276 Q 352 276 350 292 Q 348 304 334 302" fill="none" stroke="#e9dfc6" strokeWidth="4" /><ellipse cx="312" cy="266" rx="22" ry="5" fill="#5a3118" />
-    <path className="steam" d="M 304 258 q -6 -10 0 -18 q 6 -8 0 -16" fill="none" stroke="rgba(255,255,255,.6)" strokeWidth="2.5" strokeLinecap="round" />
-    <path className="steam b" d="M 318 258 q -6 -10 0 -18 q 6 -8 0 -16" fill="none" stroke="rgba(255,255,255,.6)" strokeWidth="2.5" strokeLinecap="round" />
-    <g fill="rgba(255,255,255,.07)" stroke="#d4af5f" strokeWidth="1.6"><ellipse cx="262" cy="428" rx="15" ry="9" /><ellipse cx="298" cy="426" rx="15" ry="9" />
-      <path d="M 277 426 Q 280 422 283 426" fill="none" /><path d="M 247 426 L 232 418 M 313 424 L 330 416" fill="none" /></g>
+    <ellipse cx="180" cy="190" rx="200" ry="200" fill="url(#standGlow)" />
+    <ellipse cx="180" cy="466" rx="140" ry="11" fill="rgba(0,0,0,.6)" />
+
+    <g filter="url(#marbleVeins)">
+      <rect x="88" y="452" width="184" height="13" rx="3" fill="url(#marbleFace)" />
+      <rect x="106" y="442" width="148" height="11" rx="3" fill="url(#marbleFace)" />
+      <rect x="124" y="430" width="112" height="13" rx="2" fill="url(#marbleFace)" />
+      <ellipse cx="180" cy="427" rx="42" ry="8" fill="url(#marbleFace)" /><ellipse cx="180" cy="416" rx="35" ry="7" fill="url(#marbleFace)" />
+      <path d="M 160 414 C 163 394 164 366 166 334 L 194 334 C 196 366 197 394 200 414 Z" fill="url(#marbleFace)" />
+    </g>
+    <g fill="none" stroke=${CARVE} strokeWidth="0.9">
+      <path d="M 88 452 H 272 M 106 442 H 254 M 124 430 H 236" stroke=${HIGHLIGHT} strokeWidth="1" />
+      <ellipse cx="180" cy="427" rx="42" ry="8" /><ellipse cx="180" cy="416" rx="35" ry="7" />
+      ${FLUTE_XS.map((x) => html`<path key=${x} d=${`M ${x} 340 C ${x + (x - 180) * 0.04} 372 ${x + (x - 180) * 0.1} 398 ${x + (x - 180) * 0.2} 411`} />`)}
+      <path d="M 160 412 C 172 418 188 418 200 412" /><path d="M 165 340 C 175 344 185 344 195 340" />
+      <ellipse cx="180" cy="352" rx="15.2" ry="2.6" /><ellipse cx="180" cy="376" rx="16.6" ry="2.7" /><ellipse cx="180" cy="398" rx="18.4" ry="2.8" />
+    </g>
+
+    <g transform="translate(0 -34)">
+      <g filter="url(#marbleVeins)">
+        <rect x="146" y="355" width="68" height="13" rx="4" fill="url(#marbleFace)" />
+        <rect x="120" y="344" width="120" height="12" rx="2" fill="url(#marbleFace)" />
+        <circle cx="130" cy="364" r="11" fill="url(#marbleFace)" /><circle cx="230" cy="364" r="11" fill="url(#marbleFace)" />
+        <rect x="158" y="330" width="44" height="15" rx="2" fill="url(#marbleFace)" />
+        <path d="M 58 318 H 302 C 296 326 270 328 250 330 H 110 C 90 328 64 326 58 318 Z" fill="url(#marbleShade)" />
+        <rect x="50" y="300" width="260" height="19" rx="2" fill="url(#marbleFace)" />
+        <polygon points="50,300 310,300 286,254 74,254" fill="url(#marbleTop)" />
+        <circle cx="56" cy="296" r="8" fill="url(#marbleBall)" /><circle cx="304" cy="296" r="8" fill="url(#marbleBall)" />
+      </g>
+      <g fill="none" stroke=${CARVE} strokeWidth="0.9">
+        <rect x="146" y="355" width="68" height="13" rx="4" />
+        <rect x="120" y="344" width="120" height="12" rx="2" /><path d="M 124 347 H 236" stroke=${HIGHLIGHT} />
+        ${EGG_XS.map((x) => html`<g key=${x}><ellipse cx=${x} cy="361" rx="3.5" ry="4.6" /><path d=${`M ${x - 5} 366 L ${x} 363 L ${x + 5} 366`} /></g>`)}
+        <rect x="158" y="330" width="44" height="15" rx="2" /><path d="M 162 335 H 198 M 162 340 H 198" />
+        <path d="M 58 318 H 302 C 296 326 270 328 250 330 H 110 C 90 328 64 326 58 318 Z" />
+        ${STAND_DENTIL_XS.map((x) => html`<rect key=${x} x=${x} y="321" width="5.5" height="4.6" fill=${CARVE} stroke="none" />`)}
+        <rect x="50" y="300" width="260" height="19" rx="2" />
+        <polygon points="50,300 310,300 286,254 74,254" /><path d="M 60 296 L 82 258 M 300 296 L 278 258" opacity="0.4" />
+      </g>
+      <${Volute} cx=${130} cy=${364} flip=${false} /><${Volute} cx=${230} cy=${364} flip=${true} />
+
+      <rect x="60" y="304" width="240" height="11" rx="2" fill="none" stroke=${CARVE} strokeWidth="0.9" />
+      <g fill="none" stroke=${CARVE} strokeWidth="1.1" strokeLinecap="round">
+        <path d="M 70 309.5 C 80 303 92 303 100 309 S 118 316 128 309.5 S 140 304 152 309" /><path d="M 290 309.5 C 280 303 268 303 260 309 S 242 316 232 309.5 S 220 304 208 309" />
+        <circle cx="70" cy="309.5" r="2.2" /><circle cx="290" cy="309.5" r="2.2" />
+        <ellipse cx="88" cy="305.4" rx="3.2" ry="1.6" transform="rotate(-20 88 305.4)" /><ellipse cx="116" cy="313.6" rx="3.2" ry="1.6" transform="rotate(20 116 313.6)" />
+        <ellipse cx="272" cy="305.4" rx="3.2" ry="1.6" transform="rotate(20 272 305.4)" /><ellipse cx="244" cy="313.6" rx="3.2" ry="1.6" transform="rotate(-20 244 313.6)" />
+      </g>
+      <g stroke=${CARVE} strokeWidth="0.8" fill="rgba(255,255,255,.35)">
+        ${[0, 45, 90, 135].map((a) => html`<ellipse key=${a} cx="180" cy="309.5" rx="7" ry="2.6" transform=${`rotate(${a} 180 309.5)`} />`)}
+        <circle cx="180" cy="309.5" r="2.4" fill="#d9b865" />
+      </g>
+      <g fill=${HIGHLIGHT}>${BEAD_XS.map((x) => html`<circle key=${x} cx=${x} cy="301.6" r="1.35" />`)}</g>
+
+      <rect x="88" y="290" width="184" height="9" rx="2" fill="url(#standBrass)" stroke="rgba(0,0,0,.4)" />
+      <ellipse cx="56" cy="296" rx="8.6" ry="2.2" fill="none" stroke="url(#standBrass)" strokeWidth="1.8" /><ellipse cx="304" cy="296" rx="8.6" ry="2.2" fill="none" stroke="url(#standBrass)" strokeWidth="1.8" />
+    </g>
   </svg>`;
 }
 
 /**
  * The reading screen.
- * @param {{room: Object, style: string, onStyle: function, pickedId: (string|null), onPickReading: function, today: string}} props
- *   room.book is the current book or null; style is 'stand' or 'desk'; onPickReading(book, element, kind)
- *   opens the book; today is YYYY-MM-DD for the day count
+ * @param {{room: Object, pickedId: (string|null), onPickReading: function, today: string}} props
+ *   room.book is the current book or null; onPickReading(book, element) opens the book;
+ *   today is YYYY-MM-DD for the day count
  * @returns {React.ReactElement} Reading room element
  */
-function ReadingRoom({ room, style, onStyle, pickedId, onPickReading, today }) {
+function ReadingRoom({ room, pickedId, onPickReading, today }) {
   const book = room.book;
-  const isDesk = style === 'desk';
   const days = book && book.startedAt ? SL.daysBetween(book.startedAt, today) : 0;
-  const coverTop = isDesk ? 238 : 67;                      // where the cover sits inside the scene
   const handleClick = (event) => {
-    if (DragGuard.dragging) return;                        // ignore the tap that ends a swipe
-    onPickReading(book, event.currentTarget, isDesk ? 'desk' : 'stand');
+    if (!isRealTap(event)) return;                         // ignore the touch that ends a swipe
+    onPickReading(book, event.currentTarget);
   };
   return html`<div className="reading case" data-theme="mahogany">
     <div className="reading-label">Currently Reading</div>
-    <div className="style-toggle" role="group" aria-label="Where the book rests">
-      <button aria-pressed=${!isDesk} onClick=${() => onStyle('stand')}>Stand</button>
-      <button aria-pressed=${isDesk} onClick=${() => onStyle('desk')}>Desk</button>
-    </div>
     <div className="scene">
-      ${isDesk ? html`<${DeskScene} />` : html`<${StandScene} />`}
+      <${MarbleStand} />
       ${book && html`<button className=${'reading-book' + (pickedId === book.id ? ' is-out' : '')}
-        aria-label=${`Open ${book.title}`} onClick=${handleClick}
-        style=${{ left: (360 - READING_COVER_W) / 2, top: coverTop, width: READING_COVER_W, height: READING_COVER_H,
-          transformOrigin: isDesk ? '50% 50%' : '50% 100%', transform: `rotateX(${isDesk ? DESK_TILT_DEG : STAND_TILT_DEG}deg)`,
-          boxShadow: '0 10px 22px rgba(0,0,0,.6)' }}>
+        aria-label=${`Open ${book.title}`} onPointerDown=${noteTapStart} onClick=${handleClick}
+        style=${{ left: (360 - READING_COVER_W) / 2, top: READING_COVER_TOP, width: READING_COVER_W, height: READING_COVER_H,
+          transformOrigin: '50% 100%', transform: `rotateX(${STAND_TILT_DEG}deg)`, boxShadow: '0 10px 22px rgba(0,0,0,.6)' }}>
         <${CoverArt} book=${book} width=${READING_COVER_W} height=${READING_COVER_H} />
         <div className="cover-sheen" /><div className="cover-crease" /><span className="tap-ring" />
       </button>`}
@@ -1411,8 +1496,9 @@ function StatsPage({ book, allBooks, today }) {
  * bookStage.js
  * The overlay where a book is pulled out and opened. The book is a real CSS 3D
  * box (cover, spine, page edges, back) animated with Framer Motion:
- *   shelf spine -> pulled forward -> turned to show the cover -> cover swings open.
- * Closing plays the same steps backwards, ending exactly on the spine's slot.
+ *   shelf spine -> (one quick motion) -> turned to show the cover -> cover swings open.
+ * The rest of the screen fades at the same time. Closing is one quick motion back
+ * to the spine's slot.
  */
 
 // ----------------------------------------------------------------- constants
@@ -1420,27 +1506,29 @@ const STAGE_ANCHOR_Y = 0.46;                              // vertical anchor of 
 const BOOK_MIN_W = 150;                                   // smallest book width on the stage (px)
 const BOOK_MAX_W = 240;                                   // largest book width on the stage (px)
 const BOOK_ASPECT = 1.5;                                  // book height / width
-const PULL_DEPTH_PX = 140;                                // how far the book comes toward you when pulled
+const PULL_DEPTH_PX = 110;                                // how far the book swings toward you on the way out
 const DISPLAY_TILT_Y = 22;                                // turn that keeps a little spine visible beside the cover
 const DISPLAY_TILT_X = -4;
 const OPEN_ANGLE_DEG = -180;                              // front cover swing
-const SETTLE_SPRING = { type: 'spring', stiffness: 120, damping: 17, mass: 0.9 };
-const OPEN_SPRING = { type: 'spring', stiffness: 110, damping: 20, mass: 1 };
-const PULL_TWEEN = { duration: 0.34, ease: [0.2, 0.7, 0.3, 1] };
+const DIM_FADE_S = 0.2;                                   // the rest of the screen fades while the book moves
+// One quick motion from the slot to the display pose; z arcs forward and back so it reads as pulling out
+const PULL_OUT = { type: 'spring', stiffness: 330, damping: 27, mass: 0.85, z: { duration: 0.34, times: [0, 0.4, 1], ease: 'easeOut' } };
+const PUT_BACK = { duration: 0.24, ease: [0.4, 0, 0.2, 1] };
+const OPEN_SPRING = { type: 'spring', stiffness: 240, damping: 25, mass: 0.9 };
+const COVER_SPRING = { type: 'spring', stiffness: 200, damping: 24, mass: 0.9 };
 
 /**
  * Builds the position, scale and turn for each stage of the animation.
  * @param {Object} geo - {launch, W, H, anchorX, anchorY, scale0, openScale, displayScale}
- * @returns {Object} Framer Motion variants: launch, pulled, display, open
+ * @returns {Object} Framer Motion variants: launch (in the slot), display (cover showing), open (spread)
  */
 function buildPoseVariants(geo) {
   const { launch, W, anchorX, anchorY, scale0, openScale, displayScale } = geo;
   const dx = launch.rect.cx - anchorX;                    // where the book starts, relative to the stage center
   const dy = launch.rect.cy - anchorY;
   return {
-    launch: { x: dx, y: dy, z: 0, scale: scale0, rotateX: launch.rotateX, rotateY: launch.rotateY, transition: PULL_TWEEN },
-    pulled: { x: dx, y: dy - 6, z: PULL_DEPTH_PX, scale: scale0 * 1.04, rotateX: launch.rotateX, rotateY: launch.rotateY, transition: PULL_TWEEN },
-    display: { x: 0, y: 0, z: 0, scale: displayScale, rotateX: DISPLAY_TILT_X, rotateY: DISPLAY_TILT_Y, transition: SETTLE_SPRING },
+    launch: { x: dx, y: dy, z: 0, scale: scale0, rotateX: launch.rotateX, rotateY: launch.rotateY, transition: PUT_BACK },
+    display: { x: 0, y: 0, z: [null, PULL_DEPTH_PX, 0], scale: displayScale, rotateX: DISPLAY_TILT_X, rotateY: DISPLAY_TILT_Y, transition: PULL_OUT },
     open: { x: (openScale * W) / 2, y: 0, z: 0, scale: openScale, rotateX: 0, rotateY: 0, transition: OPEN_SPRING },
   };
 }
@@ -1448,13 +1536,13 @@ function buildPoseVariants(geo) {
 /**
  * Full-screen stage that shows one book coming off the shelf and opening.
  * @param {{book: Object, allBooks: Object[], today: string, launch: Object, vp: {w: number, h: number}, onClose: function}} props
- *   launch describes where the book starts: {kind: 'shelf'|'stand'|'desk', rect: {cx, cy, w, h}, thicknessPx, rotateX, rotateY};
+ *   launch describes where the book starts: {kind: 'shelf'|'stand', rect: {cx, cy, w, h}, thicknessPx, rotateX, rotateY};
  *   onClose runs once the book is back in place
  * @returns {React.ReactElement} Stage overlay
  */
 function BookStage({ book, allBooks, today, launch, vp, onClose }) {
   const isShelf = launch.kind === 'shelf';
-  const [phase, setPhase] = useState('launch');           // which pose the book is animating toward
+  const [phase, setPhase] = useState('display');          // pose the book is animating toward; it starts at 'launch' and heads out immediately
   const [coverOpen, setCoverOpen] = useState(false);
   const [dim, setDim] = useState(true);
   const closingRef = useRef(false);
@@ -1469,31 +1557,18 @@ function BookStage({ book, allBooks, today, launch, vp, onClose }) {
   const variants = useMemo(() => buildPoseVariants({ launch, W, H, anchorX: vp.w / 2, anchorY: vp.h * STAGE_ANCHOR_Y, scale0, openScale, displayScale }),
     [launch, W, H, vp.w, vp.h, scale0, openScale, displayScale]);
 
-  // Start the pull-out on the frame after mount, so the first paint is the book sitting in its slot
-  useEffect(() => {
-    let second = 0;
-    const first = requestAnimationFrame(() => { second = requestAnimationFrame(() => setPhase(isShelf ? 'pulled' : 'display')); });
-    return () => { cancelAnimationFrame(first); cancelAnimationFrame(second); };
-  }, []);
-
-  /** Chains the animation steps: pulled leads to display; while closing, each step leads to the previous one. */
+  /** When the put-back motion reaches the slot, hand control back to the shelf. */
   const onPoseDone = (name) => {
-    if (!closingRef.current) { if (name === 'pulled') setPhase('display'); return; }
-    if (name === 'display') setPhase(isShelf ? 'pulled' : 'launch');
-    else if (name === 'pulled') setPhase('launch');
-    else if (name === 'launch') onClose();
+    if (closingRef.current && name === 'launch') onClose();
   };
 
-  /** Starts putting the book back, from whatever step it is on. */
+  /** Puts the book back in one motion, from whatever step it is on; the cover closes at the same time. */
   const requestClose = () => {
     if (closingRef.current) return;
     closingRef.current = true;
     setDim(false);
     setCoverOpen(false);
-    if (phase === 'open') setPhase('display');
-    else if (phase === 'display') setPhase(isShelf ? 'pulled' : 'launch');
-    else if (phase === 'pulled') setPhase('launch');
-    else onClose();                                       // never left its slot
+    setPhase('launch');
   };
 
   /** Opens the cover, but only once the book is showing its front. */
@@ -1507,7 +1582,7 @@ function BookStage({ book, allBooks, today, launch, vp, onClose }) {
   const faceBox = { left: 0, top: 0, width: W, height: H };
   const pageFontSize = W * 0.068;                         // page text scales with the book
   return html`<div className="stage" onClick=${requestClose}>
-    <${motion.div} className="stage-dim" initial=${{ opacity: 0 }} animate=${{ opacity: dim ? 1 : 0 }} transition=${{ duration: 0.4 }} />
+    <${motion.div} className="stage-dim" initial=${{ opacity: 0 }} animate=${{ opacity: dim ? 1 : 0 }} transition=${{ duration: DIM_FADE_S }} />
     <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
     <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>
       <${motion.div} className="book3d" style=${{ left: -W / 2, top: -H / 2, width: W, height: H }}
@@ -1515,7 +1590,7 @@ function BookStage({ book, allBooks, today, launch, vp, onClose }) {
         <div className="face page-edge" style=${{ ...faceBox, transform: `translateZ(${-D / 2}px) rotateY(180deg)`, background: '#2a1a10' }}>
           <${CoverArt} book=${book} width=${W} height=${H} /></div>
         <div className="face" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${-W / 2}px) rotateY(-90deg)` }}>
-          <${SpineArt} book=${book} width=${D} height=${H} /></div>
+          <${SpineArt} book=${book} width=${D} height=${H} unit=${1 / scale0} /></div>
         <div className="face page-edge" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${W / 2}px) rotateY(90deg)` }} />
         <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${-H / 2}px) rotateX(90deg)` }} />
         <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${H / 2}px) rotateX(-90deg)` }} />
@@ -1523,7 +1598,7 @@ function BookStage({ book, allBooks, today, launch, vp, onClose }) {
           <${StatsPage} book=${book} allBooks=${allBooks} today=${today} /></div>
         <div style=${{ ...faceBox, position: 'absolute', transformStyle: 'preserve-3d', transform: `translateZ(${D / 2}px)` }}>
           <${motion.div} style=${{ position: 'absolute', inset: 0, transformOrigin: '0% 50%', transformStyle: 'preserve-3d' }}
-            animate=${{ rotateY: coverOpen ? OPEN_ANGLE_DEG : 0 }} transition=${OPEN_SPRING}>
+            animate=${{ rotateY: coverOpen ? OPEN_ANGLE_DEG : 0 }} transition=${COVER_SPRING}>
             <div className="face cover-face" style=${faceBox} onClick=${openCover}>
               <${CoverArt} book=${book} width=${W} height=${H} /><div className="cover-sheen" /><div className="cover-crease" /></div>
             <div className="face" style=${{ ...faceBox, transform: 'rotateY(180deg)', fontSize: pageFontSize }}><${SummaryPage} book=${book} /></div>
@@ -1548,11 +1623,12 @@ const FRAME_SIDE_GUTTER = 16;                             // minimum space left 
 const PAGER_HEIGHT = 58;                                  // room kept at the bottom for the page dots
 const MAX_FRAME_SCALE = 1.3;                              // do not blow screens up beyond this on large displays
 const SNAP_SPRING = { type: 'spring', stiffness: 260, damping: 34 };
-const SWIPE_VELOCITY_WEIGHT = 0.18;                       // how much a flick counts toward the target screen
+const SWIPE_DISTANCE_FRACTION = 0.1;                      // dragging this fraction of the screen width changes screens
+const SWIPE_MIN_DISTANCE_PX = 28;                         // ...but never less than this many pixels
+const SWIPE_MAX_DISTANCE_PX = 56;                         // ...and never more than this, on wide screens
+const SWIPE_FLICK_VELOCITY = 180;                         // a quicker flick (px/s) changes screens whatever the distance
 const DRAG_GUARD_RESET_MS = 90;                           // taps right after a swipe are ignored for this long
 const HINT_VISIBLE_MS = 6000;                             // the swipe hint fades after this long
-const STYLE_STORAGE_KEY = 'bookshelf.readingStyle';       // remembered stand/desk choice (a per-viewer convenience)
-const DEFAULT_READING_STYLE = 'stand';
 
 /**
  * Tracks the window size so layouts can rescale on rotation or resize.
@@ -1566,23 +1642,6 @@ function useViewport() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
   return vp;
-}
-
-/**
- * Reads the remembered reading style; storage can be blocked, so failures fall back.
- * @returns {string} 'stand' or 'desk'
- */
-function readSavedStyle() {
-  try { const saved = localStorage.getItem(STYLE_STORAGE_KEY); return saved === 'desk' ? 'desk' : DEFAULT_READING_STYLE; }
-  catch (error) { return DEFAULT_READING_STYLE; }
-}
-
-/**
- * Remembers the reading style; ignores blocked storage.
- * @param {string} style - 'stand' or 'desk'
- */
-function saveStyle(style) {
-  try { localStorage.setItem(STYLE_STORAGE_KEY, style); } catch (error) { /* storage unavailable: the choice just won't persist */ }
 }
 
 /**
@@ -1613,10 +1672,13 @@ function SwipeTrack({ count, index, onIndex, vp, renderScreen }) {
     return () => controls.stop();
   }, [index, vp.w]);
 
-  /** After a drag, picks the nearest screen, nudged by flick speed. */
+  /** After a drag: a short drag or a quick flick moves one screen; otherwise it springs back. */
   const onDragEnd = (event, info) => {
-    const projected = x.get() + info.velocity.x * SWIPE_VELOCITY_WEIGHT;
-    const target = SL.clamp(Math.round(-projected / vp.w), 0, count - 1);
+    const needed = SL.clamp(vp.w * SWIPE_DISTANCE_FRACTION, SWIPE_MIN_DISTANCE_PX, SWIPE_MAX_DISTANCE_PX);
+    let direction = 0;                                    // +1 next screen, -1 previous
+    if (info.offset.x < -needed || info.velocity.x < -SWIPE_FLICK_VELOCITY) direction = 1;
+    else if (info.offset.x > needed || info.velocity.x > SWIPE_FLICK_VELOCITY) direction = -1;
+    const target = SL.clamp(index + direction, 0, count - 1);
     if (target === index) animate(x, -index * vp.w, SNAP_SPRING);   // the index did not change, so snap back by hand
     onIndex(target);
     setTimeout(() => { DragGuard.dragging = false; }, DRAG_GUARD_RESET_MS);
@@ -1645,7 +1707,7 @@ function Pager({ rooms, index, onIndex, showHint }) {
 
 /**
  * Describes where a tapped element is on screen so the stage can start the book there.
- * @param {string} kind - 'shelf', 'stand' or 'desk'
+ * @param {string} kind - 'shelf' or 'stand'
  * @param {Element} element - The tapped spine or cover
  * @param {Object} extras - {rotateX, rotateY, thicknessPx} for this kind of launch
  * @returns {{kind: string, rect: {cx: number, cy: number, w: number, h: number}, rotateX: number, rotateY: number, thicknessPx: number}}
@@ -1667,7 +1729,6 @@ function App() {
   const rooms = useMemo(() => SL.buildRooms(books, { sortModes }), [books, sortModes]);
   const readingAt = rooms.findIndex((r) => r.kind === 'reading');
   const [index, setIndex] = useState(readingAt);           // start on Currently Reading
-  const [readingStyle, setReadingStyle] = useState(readSavedStyle);
   const [picked, setPicked] = useState(null);              // {book, launch} while the stage is open
   const [showHint, setShowHint] = useState(true);
   const safeIndex = SL.clamp(index, 0, rooms.length - 1);
@@ -1679,28 +1740,28 @@ function App() {
     const launch = launchFromElement('shelf', element, { rotateX: 0, rotateY: 90, thicknessPx: element.getBoundingClientRect().width });
     setPicked({ book, launch });
   }, []);
-  const pickReading = useCallback((book, element, kind) => {
+  const pickReading = useCallback((book, element) => {
     const box = element.getBoundingClientRect();
     const thicknessPx = SL.spineThickness(book.pages) * (box.width / READING_COVER_W);   // thickness at the same scale as the cover
-    setPicked({ book, launch: launchFromElement(kind, element, { rotateX: kind === 'desk' ? DESK_TILT_DEG : STAND_TILT_DEG, rotateY: 0, thicknessPx }) });
+    setPicked({ book, launch: launchFromElement('stand', element, { rotateX: STAND_TILT_DEG, rotateY: 0, thicknessPx }) });
   }, []);
-  const changeStyle = useCallback((style) => { setReadingStyle(style); saveStyle(style); }, []);
+  const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 
   /** Draws screen i: the reading room or a bookcase. */
   const renderScreen = (i) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
-      ? html`<${ReadingRoom} room=${room} style=${readingStyle} onStyle=${changeStyle} pickedId=${picked && picked.book.id} onPickReading=${pickReading} today=${today} />`
+      ? html`<${ReadingRoom} room=${room} pickedId=${picked && picked.book.id} onPickReading=${pickReading} today=${today} />`
       : html`<${Bookcase} room=${room} pickedId=${picked && picked.book.id} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
     return html`<${ScreenFrame} vp=${vp}>${content}<//>`;
   };
 
-  return html`<${MotionConfig} reducedMotion="user"><div id="app-inner" style=${{ height: '100%' }}>
+  return html`<${MotionConfig} reducedMotion="user"><${SeriesStyleContext.Provider} value=${seriesStyles}><div id="app-inner" style=${{ height: '100%' }}>
     <${SwipeTrack} count=${rooms.length} index=${safeIndex} onIndex=${setIndex} vp=${vp} renderScreen=${renderScreen} />
     <${Pager} rooms=${rooms} index=${safeIndex} onIndex=${setIndex} showHint=${showHint} />
     ${picked && html`<${BookStage} key=${picked.book.id} book=${picked.book} allBooks=${books} today=${today} launch=${picked.launch} vp=${vp}
       onClose=${() => setPicked(null)} />`}
-  </div><//>`;
+  </div><//><//>`;
 }
 
 ReactDOM.createRoot(document.getElementById('app')).render(html`<${App} />`);

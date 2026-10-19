@@ -8,10 +8,11 @@
   - [x] Swipe track: TBR ← Currently Reading → genres → Youth → DNF, empty bookcases hidden
   - [x] Full bookcases continue into a copy ("Fantasy II")
   - [x] Pull-out → turn to cover → open to summary and stats
-  - [x] Currently Reading on a stand and on a desk (toggle)
+  - [x] Currently Reading on a carved marble stand (desk removed)
+  - [x] Round 2 feedback: faster pull-out and put-back, easier swipe, no hover lift, consistent series stickers
   - [x] Per-bookcase sort order (button on the plaque)
-  - [ ] **Try it on the iPhone and report what feels off** (animation speed, spine readability, sizes)
-  - [ ] Decide: stand or desk (or keep both as a setting)
+  - [ ] **Try round 2 on the iPhone and report what feels off** (swipe distance, animation speed, marble stand)
+  - [x] Decide: stand or desk (stand, now marble)
   - [ ] Decide: keep CSS 3D, or schedule the Three.js test earlier
 
 ## Next (after the prototype feedback)

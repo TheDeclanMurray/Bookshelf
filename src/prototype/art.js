@@ -11,8 +11,6 @@ const COVER_VIEW_W = 200;                                 // cover drawing coord
 const COVER_VIEW_H = 300;                                 // cover drawing coordinate height
 const COVER_STARS = [[24, 150, 1.4], [170, 140, 1.2], [60, 176, 1], [150, 168, 1.6], [100, 152, 1], [36, 112, 1.2], [176, 98, 1.4]];
 const SPINE_MIN_AUTHOR_WIDTH = 24;                        // thinner spines leave the author off
-const SPINE_MIN_ROUNDEL_WIDTH = 20;                       // thinner spines leave the series number off
-const SPINE_ROUNDEL_MAX = 17;                             // series roundel diameter (in 150px-spine units)
 
 /**
  * Cover colors derived from a hue.
@@ -103,24 +101,27 @@ function CoverArt({ book, width, height }) {
 }
 
 /**
- * A generated spine. Everything is sized from `width` and `height`, so the same
- * spine drawn bigger (on the 3D book) looks identical to the one on the shelf.
- * @param {{book: Object, width: number, height: number}} props - Book and spine size in px
+ * A generated spine. Decoration sizes use `unit` (px per design unit), so the same
+ * spine drawn bigger on the 3D book looks identical to the one on the shelf, and
+ * stickers and bands line up between books of different heights on a shelf.
+ * @param {{book: Object, width: number, height: number, unit?: number}} props - Book, spine size in px, and px per design unit (1 on a shelf)
  * @returns {React.ReactElement} Spine element filling its parent
  */
-function SpineArt({ book, width, height }) {
+function SpineArt({ book, width, height, unit = 1 }) {
   const genre = SL.genreOf(book);
   const pal = useMemo(() => SL.spinePalette(book), [book]);
-  const u = height / SL.SPINE_BASE_HEIGHT_PX;             // one "unit": sizes scale with the spine
+  const seriesStyles = useContext(SeriesStyleContext);
+  const sticker = book.series && book.seriesNumber ? seriesStyles[book.series] : undefined;   // same for every volume
+  const u = unit;                                         // one design unit in px; the same for every book on a shelf
   const w = width / u;                                    // width measured in units
   const style = genre.spineStyle;
   const hasAuthor = w >= SPINE_MIN_AUTHOR_WIDTH;
-  const hasRoundel = !!(book.series && book.seriesNumber) && w >= SPINE_MIN_ROUNDEL_WIDTH;
-  const roundelD = Math.min(w - 6, SPINE_ROUNDEL_MAX) * u;
+  const hasRoundel = !!sticker;
+  const roundelD = hasRoundel ? sticker.size * u : 0;      // size is shared by the whole series
 
   // Vertical layout, in units: decoration at the top, title, author, then series roundel and bottom decoration
   const top = (style === 'gilt' ? 17 : style === 'block' ? 23 : style === 'stripe' ? 15 : 10) * u;
-  const bottom = (hasRoundel ? 34 : (style === 'gilt' ? 17 : 11)) * u;
+  const bottom = (hasRoundel ? sticker.size + 21 : (style === 'gilt' ? 17 : 11)) * u;
   const region = height - top - bottom;
   const surname = book.author.split(' ').pop();
   const titleFit = (titleHeight) => titleHeight / (book.title.length * 0.6);   // largest font that keeps the title on one line
@@ -150,7 +151,7 @@ function SpineArt({ book, width, height }) {
       textShadow: onLabel ? 'none' : '0 1px 1px rgba(0,0,0,.45)' }}>${book.title}</div>
     ${authorH > 0 && html`<div className="sp-author" style=${{ top: top + titleH + 4 * u, height: authorH, fontFamily: 'var(--font-display)',
       fontSize: Math.min(width * 0.3, 9.5 * u, authorH / (surname.length * 0.85)), color: pal.text, opacity: 0.8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>${surname}</div>`}
-    ${hasRoundel && html`<div className="sp-roundel" style=${{ bottom: (style === 'gilt' ? 16 : 11) * u, width: roundelD, height: roundelD, background: pal.accent,
-      color: pal.isLight ? '#f3ead7' : '#2b1c0a', fontSize: roundelD * 0.62, fontFamily: 'var(--font-display)', boxShadow: '0 1px 2px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.3)' }}>${book.seriesNumber}</div>`}
+    ${hasRoundel && html`<div className="sp-roundel" style=${{ bottom: (style === 'gilt' ? 16 : 11) * u, width: roundelD, height: roundelD, background: sticker.bg,
+      color: sticker.text, fontSize: roundelD * 0.64, fontFamily: 'var(--font-display)', boxShadow: `0 0 0 ${Math.max(0.6, 0.9 * u)}px ${sticker.ring}, 0 1px 2px rgba(0,0,0,.5)` }}>${book.seriesNumber}</div>`}
   </div>`;
 }

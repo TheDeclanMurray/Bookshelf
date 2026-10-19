@@ -26,3 +26,8 @@
 | 2026-10-19 | Prototype art (bookcases, covers, stand, desk) is drawn with CSS and SVG; covers are generated, not fetched | Artifacts cannot load outside images, and real covers need the backend. AI or stock art can replace this later. |
 | 2026-10-19 | Empty bookcases are hidden; the shelves inside a visible bookcase are always drawn | A bookcase with missing shelves would not look like furniture. Tell me if you meant something different. |
 | 2026-10-19 | Prototype includes both the reading stand and the desk, with a toggle | User wanted to try both |
+| 2026-10-19 | Currently Reading uses a carved marble stand only; the desk is removed | User preferred the stand and asked for intricately carved marble |
+| 2026-10-19 | Pull-out is one quick motion (about 0.3 s) while the screen fades at the same time; put-back is one motion (about 0.25 s) | The first version fed the dimming and the pull-out in sequence and felt slow |
+| 2026-10-19 | Swiping changes screens after about 10% of the screen width (28 to 56 px) or a quick flick; spines no longer lift on hover | Full-width drags were too long on a phone, and the hover lift got in the way of swiping over books |
+| 2026-10-19 | A tap only counts if the finger moved less than 10 px; every touch target lets the swipe through | Swipes that started or ended on a spine were being lost or opening books |
+| 2026-10-19 | Each series has one number sticker style: same size (fits the thinnest volume), same color, same number color. Stickers are anchored to the shelf, not to each book's height | User wanted consistent series numbers |

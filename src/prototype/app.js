@@ -11,11 +11,12 @@ const FRAME_SIDE_GUTTER = 16;                             // minimum space left 
 const PAGER_HEIGHT = 58;                                  // room kept at the bottom for the page dots
 const MAX_FRAME_SCALE = 1.3;                              // do not blow screens up beyond this on large displays
 const SNAP_SPRING = { type: 'spring', stiffness: 260, damping: 34 };
-const SWIPE_VELOCITY_WEIGHT = 0.18;                       // how much a flick counts toward the target screen
+const SWIPE_DISTANCE_FRACTION = 0.1;                      // dragging this fraction of the screen width changes screens
+const SWIPE_MIN_DISTANCE_PX = 28;                         // ...but never less than this many pixels
+const SWIPE_MAX_DISTANCE_PX = 56;                         // ...and never more than this, on wide screens
+const SWIPE_FLICK_VELOCITY = 180;                         // a quicker flick (px/s) changes screens whatever the distance
 const DRAG_GUARD_RESET_MS = 90;                           // taps right after a swipe are ignored for this long
 const HINT_VISIBLE_MS = 6000;                             // the swipe hint fades after this long
-const STYLE_STORAGE_KEY = 'bookshelf.readingStyle';       // remembered stand/desk choice (a per-viewer convenience)
-const DEFAULT_READING_STYLE = 'stand';
 
 /**
  * Tracks the window size so layouts can rescale on rotation or resize.
@@ -29,23 +30,6 @@ function useViewport() {
     return () => window.removeEventListener('resize', onResize);
   }, []);
   return vp;
-}
-
-/**
- * Reads the remembered reading style; storage can be blocked, so failures fall back.
- * @returns {string} 'stand' or 'desk'
- */
-function readSavedStyle() {
-  try { const saved = localStorage.getItem(STYLE_STORAGE_KEY); return saved === 'desk' ? 'desk' : DEFAULT_READING_STYLE; }
-  catch (error) { return DEFAULT_READING_STYLE; }
-}
-
-/**
- * Remembers the reading style; ignores blocked storage.
- * @param {string} style - 'stand' or 'desk'
- */
-function saveStyle(style) {
-  try { localStorage.setItem(STYLE_STORAGE_KEY, style); } catch (error) { /* storage unavailable: the choice just won't persist */ }
 }
 
 /**
@@ -76,10 +60,13 @@ function SwipeTrack({ count, index, onIndex, vp, renderScreen }) {
     return () => controls.stop();
   }, [index, vp.w]);
 
-  /** After a drag, picks the nearest screen, nudged by flick speed. */
+  /** After a drag: a short drag or a quick flick moves one screen; otherwise it springs back. */
   const onDragEnd = (event, info) => {
-    const projected = x.get() + info.velocity.x * SWIPE_VELOCITY_WEIGHT;
-    const target = SL.clamp(Math.round(-projected / vp.w), 0, count - 1);
+    const needed = SL.clamp(vp.w * SWIPE_DISTANCE_FRACTION, SWIPE_MIN_DISTANCE_PX, SWIPE_MAX_DISTANCE_PX);
+    let direction = 0;                                    // +1 next screen, -1 previous
+    if (info.offset.x < -needed || info.velocity.x < -SWIPE_FLICK_VELOCITY) direction = 1;
+    else if (info.offset.x > needed || info.velocity.x > SWIPE_FLICK_VELOCITY) direction = -1;
+    const target = SL.clamp(index + direction, 0, count - 1);
     if (target === index) animate(x, -index * vp.w, SNAP_SPRING);   // the index did not change, so snap back by hand
     onIndex(target);
     setTimeout(() => { DragGuard.dragging = false; }, DRAG_GUARD_RESET_MS);
@@ -108,7 +95,7 @@ function Pager({ rooms, index, onIndex, showHint }) {
 
 /**
  * Describes where a tapped element is on screen so the stage can start the book there.
- * @param {string} kind - 'shelf', 'stand' or 'desk'
+ * @param {string} kind - 'shelf' or 'stand'
  * @param {Element} element - The tapped spine or cover
  * @param {Object} extras - {rotateX, rotateY, thicknessPx} for this kind of launch
  * @returns {{kind: string, rect: {cx: number, cy: number, w: number, h: number}, rotateX: number, rotateY: number, thicknessPx: number}}
@@ -130,7 +117,6 @@ function App() {
   const rooms = useMemo(() => SL.buildRooms(books, { sortModes }), [books, sortModes]);
   const readingAt = rooms.findIndex((r) => r.kind === 'reading');
   const [index, setIndex] = useState(readingAt);           // start on Currently Reading
-  const [readingStyle, setReadingStyle] = useState(readSavedStyle);
   const [picked, setPicked] = useState(null);              // {book, launch} while the stage is open
   const [showHint, setShowHint] = useState(true);
   const safeIndex = SL.clamp(index, 0, rooms.length - 1);
@@ -142,28 +128,28 @@ function App() {
     const launch = launchFromElement('shelf', element, { rotateX: 0, rotateY: 90, thicknessPx: element.getBoundingClientRect().width });
     setPicked({ book, launch });
   }, []);
-  const pickReading = useCallback((book, element, kind) => {
+  const pickReading = useCallback((book, element) => {
     const box = element.getBoundingClientRect();
     const thicknessPx = SL.spineThickness(book.pages) * (box.width / READING_COVER_W);   // thickness at the same scale as the cover
-    setPicked({ book, launch: launchFromElement(kind, element, { rotateX: kind === 'desk' ? DESK_TILT_DEG : STAND_TILT_DEG, rotateY: 0, thicknessPx }) });
+    setPicked({ book, launch: launchFromElement('stand', element, { rotateX: STAND_TILT_DEG, rotateY: 0, thicknessPx }) });
   }, []);
-  const changeStyle = useCallback((style) => { setReadingStyle(style); saveStyle(style); }, []);
+  const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 
   /** Draws screen i: the reading room or a bookcase. */
   const renderScreen = (i) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
-      ? html`<${ReadingRoom} room=${room} style=${readingStyle} onStyle=${changeStyle} pickedId=${picked && picked.book.id} onPickReading=${pickReading} today=${today} />`
+      ? html`<${ReadingRoom} room=${room} pickedId=${picked && picked.book.id} onPickReading=${pickReading} today=${today} />`
       : html`<${Bookcase} room=${room} pickedId=${picked && picked.book.id} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
     return html`<${ScreenFrame} vp=${vp}>${content}<//>`;
   };
 
-  return html`<${MotionConfig} reducedMotion="user"><div id="app-inner" style=${{ height: '100%' }}>
+  return html`<${MotionConfig} reducedMotion="user"><${SeriesStyleContext.Provider} value=${seriesStyles}><div id="app-inner" style=${{ height: '100%' }}>
     <${SwipeTrack} count=${rooms.length} index=${safeIndex} onIndex=${setIndex} vp=${vp} renderScreen=${renderScreen} />
     <${Pager} rooms=${rooms} index=${safeIndex} onIndex=${setIndex} showHint=${showHint} />
     ${picked && html`<${BookStage} key=${picked.book.id} book=${picked.book} allBooks=${books} today=${today} launch=${picked.launch} vp=${vp}
       onClose=${() => setPicked(null)} />`}
-  </div><//>`;
+  </div><//><//>`;
 }
 
 ReactDOM.createRoot(document.getElementById('app')).render(html`<${App} />`);

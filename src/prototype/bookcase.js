@@ -47,11 +47,11 @@ function Pilaster() {
 const SpineButton = memo(function SpineButton({ placed, isOut, onPick }) {
   const { book, thickness, height } = placed;
   const handleClick = (event) => {
-    if (DragGuard.dragging) return;                       // ignore the tap that ends a swipe
+    if (!isRealTap(event)) return;                        // ignore the touch that ends a swipe
     onPick(book, event.currentTarget);
   };
   return html`<button className=${'spine' + (isOut ? ' is-out' : '')} style=${{ width: thickness, height }}
-    aria-label=${`${book.title} by ${book.author}`} onClick=${handleClick}>
+    aria-label=${`${book.title} by ${book.author}`} onPointerDown=${noteTapStart} onClick=${handleClick}>
     <${SpineArt} book=${book} width=${thickness} height=${height} />
   </button>`;
 });

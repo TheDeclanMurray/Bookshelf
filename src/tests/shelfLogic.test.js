@@ -241,3 +241,40 @@ test('clamp limits a value to a range', () => {
   assert.equal(SL.clamp(-1, 0, 3), 0);
   assert.equal(SL.clamp(2, 0, 3), 2);
 });
+
+// ---------------------------------------------------------------- series stickers
+test('buildSeriesStyles gives every volume of a series the same sticker, sized to the thinnest volume', () => {
+  const books = [
+    book({ id: 'a1', series: 'Saga', seriesNumber: 1, pages: 900, hue: 20 }),
+    book({ id: 'a2', series: 'Saga', seriesNumber: 2, pages: 300, hue: 28 }),   // 19px thick
+    book({ id: 'b1', series: 'Other', seriesNumber: 1, pages: 900, hue: 200 }),
+    book({ id: 'c', pages: 500 }),                                               // standalone
+  ];
+  const styles = SL.buildSeriesStyles(books);
+  assert.deepEqual(Object.keys(styles).sort(), ['Other', 'Saga']);
+  assert.equal(styles.Saga.size, 15);                  // 19px thinnest minus 4px margin
+  assert.equal(styles.Other.size, 17);                 // capped at the maximum
+  assert.notEqual(styles.Saga.bg, styles.Other.bg);    // different series can differ
+});
+
+test('buildSeriesStyles takes the color from volume 1 whatever the order, and is repeatable', () => {
+  const list = [book({ id: '2', series: 'S', seriesNumber: 2, hue: 90 }), book({ id: '1', series: 'S', seriesNumber: 1, hue: 10 })];
+  const styles = SL.buildSeriesStyles(list);
+  assert.match(styles.S.bg, /^hsl\(190,/);              // complement of volume 1's hue (10)
+  assert.deepEqual(SL.buildSeriesStyles(list.slice().reverse()), styles);
+});
+
+test('buildSeriesStyles clamps tiny spines to the minimum and ignores unnumbered series books', () => {
+  const styles = SL.buildSeriesStyles([book({ id: 'x', series: 'Tiny', seriesNumber: 1, pages: 50 }), book({ id: 'y', series: 'NoNumber', seriesNumber: 0 })]);
+  assert.equal(styles.Tiny.size, 11);
+  assert.equal(styles.NoNumber, undefined);
+});
+
+test('every volume of every series in the example library fits its sticker', () => {
+  const { buildFakeLibrary } = require('../prototype/fakeData');
+  const books = buildFakeLibrary('2026-10-19');
+  const styles = SL.buildSeriesStyles(books);
+  for (const b of books.filter((x) => x.series)) {
+    assert.ok(styles[b.series].size <= SL.spineThickness(b.pages) - 4 || styles[b.series].size === 11, b.id);
+  }
+});

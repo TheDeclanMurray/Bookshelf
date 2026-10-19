@@ -25,6 +25,9 @@ const ShelfLogic = (function () {
     'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX'];
   const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   const MS_PER_DAY = 86400000;
+  const STICKER_MIN_PX = 11;            // smallest series number sticker (in 150px-spine units)
+  const STICKER_MAX_PX = 17;            // largest series number sticker
+  const STICKER_MARGIN_PX = 4;          // space kept between a sticker and the spine edges
 
   /** Reading statuses a book can have. */
   const STATUSES = ['reading', 'read', 'dnf', 'tbr'];
@@ -466,6 +469,34 @@ const ShelfLogic = (function () {
     return Math.min(max, Math.max(min, value));
   }
 
+  /**
+   * One sticker style per series, so every volume carries the same number sticker:
+   * same size, same background, same number color. The size fits the thinnest
+   * volume in the series, so it fits all of them. Standalones get no entry.
+   * @param {Object[]} books - Every book in the library
+   * @returns {Object<string, {size: number, bg: string, text: string, ring: string}>} Style by series name
+   */
+  function buildSeriesStyles(books) {
+    const bySeries = {};
+    for (const book of books) {
+      if (!book.series || !book.seriesNumber) continue;   // only numbered series books get stickers
+      (bySeries[book.series] = bySeries[book.series] || []).push(book);
+    }
+    const styles = {};
+    for (const [name, volumes] of Object.entries(bySeries)) {
+      const thinnest = Math.min(...volumes.map((b) => spineThickness(b.pages)));
+      const first = volumes.reduce((a, b) => (b.seriesNumber < a.seriesNumber ? b : a));   // volume 1 sets the color
+      const complement = (first.hue + 180) % 360;         // opposite hue stands out against the spines
+      styles[name] = {
+        size: clamp(thinnest - STICKER_MARGIN_PX, STICKER_MIN_PX, STICKER_MAX_PX),
+        bg: `hsl(${complement}, 45%, 84%)`,
+        text: `hsl(${first.hue}, 55%, 14%)`,
+        ring: `hsl(${complement}, 40%, 36%)`,
+      };
+    }
+    return styles;
+  }
+
   return {
     // constants other files read
     GENRES, SPECIAL_GROUPS, SORT_MODES, STATUSES, AGES,
@@ -474,7 +505,7 @@ const ShelfLogic = (function () {
     hashString, seededRandom, spineThickness, spineHeight, hslToRgb, relativeLuminance,
     readableTextColor, spinePalette, titleSortKey, authorSortKey, compareLibraryOrder, sortBooks,
     nextSortMode, packIntoCases, toRoman, caseTitle, groupBooks, buildRooms, genreOf, seriesLabel,
-    daysBetween, formatShortDate, todayIso, clamp,
+    daysBetween, formatShortDate, todayIso, clamp, buildSeriesStyles,
   };
 })();
 
