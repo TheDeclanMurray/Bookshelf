@@ -51,3 +51,4 @@
 | 2026-10-19 | A book's page edges start in shadow and brighten as it leaves the shelf (a CSS color change on an overlay, never opacity) | With real perspective, a book above the screen center shows its bottom edge, which looked like a white flash at the shelf |
 | 2026-10-19 | Phase 0 rendering work is finished; covers stay generated drawings until the real app supplies cover images | Real covers are images from the backend, so they need no drawing code |
 | 2026-10-19 | Photographed pictures opt out of host image rules (`max-width: none`) | Host pages (the Artifact wrapper) can shrink any `<img>`, which moved the frame off-centre |
+| 2026-10-19 | The stage perspective lives on a flat wrapper (`.stage-clip`) that is clipped to the spine width at the end of a shelf put-back | Hides the side wall that neighbours would cover on a real shelf; clip-path on the 3D book itself would flatten it |
