@@ -63,15 +63,14 @@ function settleMotion(element) {
  * Plays keyframes on an element, then writes the final values into its style.
  * A new call on the same element first settles the previous one, so interruptions are smooth.
  * @param {HTMLElement} element - Element to animate
- * @param {Object[]} frames - Keyframes; each may have transform, opacity, offset, easing
+ * @param {Object[]} frames - Keyframes; each may have transform, opacity, perspectiveOrigin, offset, easing
  * @param {{duration: number, easing?: string, delay?: number}} options - Timing in milliseconds
  * @returns {Promise<boolean>} Resolves true when it finished, false when something interrupted it
  */
 function playMotion(element, frames, { duration, easing = EASE_OUT, delay = 0 }) {
   const last = frames[frames.length - 1];
   const applyFinal = () => {
-    if (last.transform !== undefined) element.style.transform = last.transform;
-    if (last.opacity !== undefined) element.style.opacity = String(last.opacity);
+    for (const [key, value] of Object.entries(last)) if (key !== 'offset' && key !== 'easing') element.style[key] = String(value);   // keep the end state (transform, perspectiveOrigin, ...)
   };
   settleMotion(element);
   if (typeof element.animate !== 'function') { applyFinal(); return Promise.resolve(true); }   // very old browser: jump to the end
@@ -88,8 +87,8 @@ function playMotion(element, frames, { duration, easing = EASE_OUT, delay = 0 })
 /**
  * Moves an element from where it is (or from a known pose) to a target.
  * @param {HTMLElement} element - Element to animate
- * @param {{transform?: string, opacity?: number}} to - End values
- * @param {{duration: number, easing?: string, delay?: number, from?: Object, via?: Object}} options - Timing, a known start when the element is at rest, and an optional middle keyframe ({transform, offset})
+ * @param {{transform?: string, opacity?: number, perspectiveOrigin?: string}} to - End values
+ * @param {{duration: number, easing?: string, delay?: number, from?: Object, via?: Object}} options - Timing, a known start when the element is at rest, and an optional middle keyframe (end-value keys plus offset)
  * @returns {Promise<boolean>} Resolves true when it finished, false when interrupted
  */
 function playMotionTo(element, to, { from, via, ...timing }) {
@@ -99,7 +98,7 @@ function playMotionTo(element, to, { from, via, ...timing }) {
   const known = interrupted ? undefined : from;           // a given start is only trusted when the element was at rest
   const startFrame = {};
   for (const key of Object.keys(to)) {
-    startFrame[key] = known && known[key] !== undefined ? known[key] : (key === 'opacity' ? Number(style.opacity) : style.transform);
+    startFrame[key] = known && known[key] !== undefined ? known[key] : (key === 'opacity' ? Number(style.opacity) : style[key]);
   }
   return playMotion(element, via ? [startFrame, via, to] : [startFrame, to], timing);
 }

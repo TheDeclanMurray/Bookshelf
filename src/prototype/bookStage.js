@@ -118,7 +118,16 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   const H = Math.round(W * BOOK_ASPECT);
   const anchorX = vp.w / 2;
   const anchorY = vp.h * STAGE_ANCHOR_Y;
-  const { pose: launchPose, D } = useMemo(() => solveLaunchPose({ launch, W, H, anchorX, anchorY }), [launch, W, H, anchorX, anchorY]);
+  // A shelf book is viewed from straight in front of its own slot (so only its spine shows, never its top or sides, on any
+  // shelf); the viewpoint then glides to the stage centre as the book comes out. A stand book keeps the stage centre.
+  const slotX = isShelf ? launch.rect.cx : anchorX;
+  const slotY = isShelf ? launch.rect.cy : anchorY;
+  const slotOrigin = `${slotX}px ${slotY}px`;
+  const stageOrigin = `${anchorX}px ${anchorY}px`;
+  const { pose: launchPose, D } = useMemo(() => {
+    const solved = solveLaunchPose({ launch, W, H, anchorX: slotX, anchorY: slotY });   // solved relative to the slot's viewpoint...
+    return { D: solved.D, pose: { ...solved.pose, x: solved.pose.x + slotX - anchorX, y: solved.pose.y + slotY - anchorY } };   // ...then moved to the stage's frame
+  }, [launch, W, H, slotX, slotY, anchorX, anchorY]);
   const scale0 = launch.rect.h / H;                       // nominal size at the start, used for the spine's decoration scale
   const displayScale = Math.min(1.45, (vp.w - 48) / (W + D * 0.5), (vp.h * 0.6) / H);
   const openScale = Math.min(1.25, (vp.w - 16) / (2 * W), (vp.h * 0.8) / H);
@@ -141,6 +150,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     poseRef.current.style.transform = launchT;            // in place before the first paint
     Promise.all([
       playMotion(poseRef.current, [{ transform: launchT }, { transform: displayT }], { duration: PULL_OUT_MS, easing: EASE_OUT }),
+      playMotion(clipRef.current, [{ perspectiveOrigin: slotOrigin }, { perspectiveOrigin: stageOrigin }], { duration: PULL_OUT_MS, easing: EASE_OUT }),
       playMotion(liftRef.current, hump, { duration: PULL_OUT_MS, easing: 'linear' }),
     ]).then(([moved]) => {
       if (!moved || phaseRef.current !== 'launching') return;   // interrupted by an early close
@@ -186,6 +196,10 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     // A straight line from the big pose to the slot dips the book below its shelf board on the way (it is nearer the camera,
     // so its bottom edge projects lower). A middle keyframe brings it to shelf height first, then it pushes in.
     const via = isShelf ? { transform: poseTransform(blendPose(sourcePose, poses.launch, SLIDE_MID_PLACE, SLIDE_MID_SHAPE)), offset: SLIDE_MID_OFFSET } : undefined;
+    if (isShelf) {   // the viewpoint returns to the slot, so the book ends (and is seen going in) face-on
+      playMotionTo(clipRef.current, { perspectiveOrigin: slotOrigin }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: { perspectiveOrigin: stageOrigin },
+        via: { perspectiveOrigin: slotOrigin, offset: SLIDE_MID_OFFSET } });
+    }
     playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom, via })
       .then((finished) => { if (finished) onClose(); });
   };
@@ -223,7 +237,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   return html`<div className="stage" onClick=${requestClose}>
     <div className="stage-dim" ref=${dimRef} />
     <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
-    <div className="stage-clip" ref=${clipRef} style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: `${anchorX}px ${anchorY}px` }}>
+    <div className="stage-clip" ref=${clipRef} style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: slotOrigin }}>
     <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>
       <div className="book3d" ref=${poseRef} style=${{ left: -W / 2, top: -H / 2, width: W, height: H }}>
         <div className="book-lift" ref=${liftRef}>
