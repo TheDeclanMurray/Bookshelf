@@ -21,3 +21,8 @@
 | 2026-10-19 | Host on a subdomain of the user's domain via Cloudflare DNS (DNS-only CNAME to CloudFront) | The user already owns the domain |
 | 2026-10-19 | Build the prototype as a claude.ai Artifact | Fastest way to try it on the iPhone before any infrastructure exists |
 | 2026-10-19 | Don't install the `.claude/` safety hooks (secret and destructive-git blockers) | They came from an older version of the setup skill and are no longer wanted. `.gitignore` and `.claudeignore` still keep `.env` files out. |
+| 2026-10-19 | Prototype is a single HTML file built from small source files in `src/prototype/` (`npm run build:prototype`) | Artifacts must be one page, but the logic stays in separate files so it can be unit-tested |
+| 2026-10-19 | Prototype uses React + htm + Framer Motion loaded from CDNs, no JSX build step | Fastest way to test the planned animation stack inside an Artifact |
+| 2026-10-19 | Prototype art (bookcases, covers, stand, desk) is drawn with CSS and SVG; covers are generated, not fetched | Artifacts cannot load outside images, and real covers need the backend. AI or stock art can replace this later. |
+| 2026-10-19 | Empty bookcases are hidden; the shelves inside a visible bookcase are always drawn | A bookcase with missing shelves would not look like furniture. Tell me if you meant something different. |
+| 2026-10-19 | Prototype includes both the reading stand and the desk, with a toggle | User wanted to try both |

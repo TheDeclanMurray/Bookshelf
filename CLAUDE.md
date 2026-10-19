@@ -11,7 +11,8 @@ A personal media tracker that looks like an ornate, old library, as a PWA for iP
 
 ## File & Folder Structure
 - `docs/`: architecture, scope, decisions, issues, TODO
-- `src/`: application code (not started)
+- `src/prototype/`: Phase 0 prototype source (logic, fake data, UI files, `build.mjs`) and the built `bookshelf-prototype.html`
+- `src/`: real application code (not started)
 - `src/tests/`: unit and integration tests
 - `infra/`: Terraform (to be added in Phase 1)
 - `logs/`: runtime logs (gitignored)
@@ -22,13 +23,13 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 - Cognito issues the JWTs that the API checks.
 
 ## Test Files
-- UnitTests: `src/tests/` — run with: `npm test` (Vitest; not yet set up)
+- UnitTests: `src/tests/*.test.js` (Node's built-in runner; logic and fake data) — run with: `npm test`
 - IntegrationTests: `src/tests/e2e/` — run with: `npx playwright test` (not yet set up)
 
 ## Progress
 - [x] Planning and architecture docs
 - [x] Repo scaffold
-- [ ] Phase 0 prototype (Artifact)
+- [x] Phase 0 prototype (Artifact published; waiting on iPhone feedback)
 - [ ] Phase 1 Books MVP
 - [ ] Phase 2 Stats
 - [ ] Phase 3 Three.js comparison
@@ -45,3 +46,7 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 ## Known Issues & Decisions
 - See `docs/DECISIONS.md` and `docs/ISSUES-ENCOUNTERED.md`.
 - All DynamoDB keys are prefixed with `USER#<id>` so more users can be added without a migration.
+
+## Prototype notes
+- Edit files in `src/prototype/`, then run `npm run build:prototype` and republish `bookshelf-prototype.html` as an Artifact.
+- Libraries (React, htm, Framer Motion) load from CDNs, so the page only renders where those hosts are reachable.
