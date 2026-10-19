@@ -14,11 +14,13 @@
   - [x] Round 3 feedback: slightly slower pull-out, close cover before putting back, 3D marble column stand
   - [x] Round 4 feedback: smoother pick-up and put-back (Web Animations, no re-render on pick)
   - [x] Round 5: fix put-back landing in the wrong place, fewer redraws (docs/RENDERING.md)
-  - [ ] **Try round 5 on the iPhone and report what feels off** (put-back landing exactly in place, smoothness, stand speed)
+  - [x] Round 6: Ionic column, column rendered once as an image
+  - [ ] **Try round 6 on the iPhone and report what feels off** (Ionic column look, put-back landing, smoothness)
   - [x] Decide: stand or desk (stand, now marble)
   - [ ] Decide: keep CSS 3D, or schedule the Three.js test earlier
 
 ## Next (after the prototype feedback)
+- [ ] Render static parts once: bookcase frames per theme (build time) and per-book spine bitmaps (canvas, cached in the browser and S3). See docs/RENDERING.md
 - [ ] Art upgrade: AI-generated or free carved-wood textures and ornaments to replace the CSS/SVG drawing
 - [ ] Real spine fonts check on device (fonts load from Google Fonts)
 - [ ] Phase 1: Vite + React + TS + PWA scaffold, Vitest, Playwright

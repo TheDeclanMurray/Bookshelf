@@ -7,8 +7,10 @@
  */
 
 // ----------------------------------------------------------------- constants
-const VEIN_TEXTURE_PX = 256;                              // tile size; sine frequencies are whole numbers, so the tile repeats seamlessly
-const VEIN_RGB = [118, 124, 142];                         // cool grey filaments
+const VEIN_TEXTURE_PX = 256;                              // tile size; the noise wraps around, so the tile repeats seamlessly
+const VEIN_RGB = [112, 118, 138];                         // cool grey filaments
+const NOISE_OCTAVES = 4;
+const WARP_STRENGTH = 0.32;                               // how far the warp bends the veins
 
 /**
  * Smooth 0-1 ramp between two edges (either order).
@@ -23,18 +25,69 @@ function smoothStep(edge0, edge1, x) {
 }
 
 /**
- * Computes how strong a vein is at one point of the tile.
+ * A repeatable random number for a lattice point; the point wraps around at `period`, so noise tiles.
+ * @param {number} ix - Lattice column
+ * @param {number} iy - Lattice row
+ * @param {number} period - Lattice size before it wraps
+ * @param {number} seed - Different seeds give different patterns
+ * @returns {number} 0 to 1
+ */
+function latticeValue(ix, iy, period, seed) {
+  const x = ((ix % period) + period) % period;
+  const y = ((iy % period) + period) % period;
+  let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+
+/**
+ * Smooth value noise at one point.
+ * @param {number} x - Horizontal position in lattice units
+ * @param {number} y - Vertical position in lattice units
+ * @param {number} period - Lattice size before it wraps
+ * @param {number} seed - Pattern seed
+ * @returns {number} 0 to 1
+ */
+function valueNoise(x, y, period, seed) {
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const sx = smoothStep(0, 1, x - x0), sy = smoothStep(0, 1, y - y0);
+  const top = latticeValue(x0, y0, period, seed) * (1 - sx) + latticeValue(x0 + 1, y0, period, seed) * sx;
+  const bottom = latticeValue(x0, y0 + 1, period, seed) * (1 - sx) + latticeValue(x0 + 1, y0 + 1, period, seed) * sx;
+  return top * (1 - sy) + bottom * sy;
+}
+
+/**
+ * Layers of noise at doubling detail (fractal noise); repeats seamlessly over u and v from 0 to 1.
+ * @param {number} u - Horizontal position, may be outside 0-1 (it wraps)
+ * @param {number} v - Vertical position, may be outside 0-1 (it wraps)
+ * @param {number} basePeriod - Lattice size of the coarsest layer
+ * @param {number} seed - Pattern seed
+ * @returns {number} 0 to 1, mostly near 0.5
+ */
+function fractalNoise(u, v, basePeriod, seed) {
+  let sum = 0, amplitude = 0.5, total = 0;
+  for (let octave = 0; octave < NOISE_OCTAVES; octave++) {
+    const period = basePeriod * 2 ** octave;
+    sum += amplitude * valueNoise(u * period, v * period, period, seed + octave);
+    total += amplitude;
+    amplitude *= 0.5;
+  }
+  return sum / total;
+}
+
+/**
+ * How strong a vein is at one point of the tile. Veins run along the places where the noise crosses
+ * its middle value, which always form continuous winding lines.
  * @param {number} u - Horizontal position, 0 to 1
  * @param {number} v - Vertical position, 0 to 1
  * @returns {number} Opacity 0 to 1
  */
 function veinStrength(u, v) {
-  const TAU = Math.PI * 2;
-  // A gentle warp bends the lines so they wander like real veins
-  const warp = 0.18 * Math.sin(TAU * (2 * u + 3 * v)) + 0.1 * Math.sin(TAU * (5 * u - 4 * v + 0.3)) + 0.05 * Math.sin(TAU * (9 * u + 7 * v));
-  const main = Math.abs(Math.sin(TAU * (u + 2 * v + warp * 1.5)));          // near 0 along a vein
-  const branch = Math.abs(Math.sin(TAU * (3 * u - v + warp * 2.2 + 0.4)));
-  return Math.min(0.6, smoothStep(0.11, 0, main) * 0.5 + smoothStep(0.06, 0, branch) * 0.32);
+  const warpedU = u + WARP_STRENGTH * (fractalNoise(u, v, 2, 11) - 0.5);        // bend the lines so they wander
+  const warpedV = v + WARP_STRENGTH * (fractalNoise(u + 0.37, v + 0.61, 2, 29) - 0.5);
+  const distance = Math.abs(fractalNoise(warpedU, warpedV, 3, 3) - 0.5) * 2;    // 0 right on a vein
+  return Math.min(0.7, smoothStep(0.07, 0, distance) * 0.62 + smoothStep(0.3, 0, distance) * 0.1);
 }
 
 /**
@@ -66,4 +119,8 @@ function installMarbleTexture() {
   } catch (error) { /* no canvas available: keep the SVG fallback from styles.css */ }
 }
 
-installMarbleTexture();
+if (typeof document !== 'undefined') installMarbleTexture();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { veinStrength, smoothStep, valueNoise, fractalNoise };   // Node (tests)
+}

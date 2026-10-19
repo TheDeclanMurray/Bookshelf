@@ -128,8 +128,10 @@ button { font: inherit; color: inherit; }
 .reading-label::after { content: ""; display: block; margin: 8px auto 0; width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--brass-dim), transparent); }
 .scene { position: absolute; left: 0; top: 74px; width: 360px; height: 470px; perspective: 1100px; perspective-origin: 50% 38%; }
 .stand-glow { position: absolute; left: -40px; top: 10px; width: 440px; height: 440px; border-radius: 50%; background: radial-gradient(circle, rgba(233,164,92,.26), rgba(233,164,92,0) 68%); }
-.stand-anchor { position: absolute; left: 180px; width: 0; height: 0; transform-style: preserve-3d; }
+.stand-anchor { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
 .stand3d { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.f3-group { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.stand-image { position: absolute; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .f3 { position: absolute; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .f3-edge { box-shadow: inset 0 0 0 0.6px rgba(40, 44, 56, .35); }
 .floor-shadow { position: absolute; left: -170px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65), rgba(0,0,0,0) 66%); }
@@ -192,3 +194,6 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   .tap-ring { animation: none; }
 }
+
+/* renderStand.mjs photographs the column on a transparent background */
+html.render-stand, html.render-stand body, html.render-stand #app { background: transparent !important; }

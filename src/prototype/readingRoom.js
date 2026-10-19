@@ -8,6 +8,7 @@
 const READING_BOOK_W = 112;                               // size of the book on the stand, in frame px
 const READING_BOOK_H = 168;
 const READING_BOOK_D = 26;                                // thickness on the stand (a typical novel)
+const SCENE_ANCHOR_X = 180;                               // horizontal center of the stand inside the scene
 const STAND_TOP_Y = 218;                                  // where the abacus' top surface sits inside the scene
 
 /**
@@ -29,7 +30,8 @@ const ReadingRoom = memo(function ReadingRoom({ room, onPickReading, today }) {
     <div className="reading-label">Currently Reading</div>
     <div className="scene">
       <div className="stand-glow" />
-      <div className="stand-anchor" style=${{ top: STAND_TOP_Y }}>
+      ${hasStandImage() && html`<${StandImage} />`}
+      <div className="stand-anchor" style=${{ left: SCENE_ANCHOR_X, top: STAND_TOP_Y }}>
         <${MarbleStand} book=${book} W=${READING_BOOK_W} H=${READING_BOOK_H} D=${READING_BOOK_D} onBookClick=${handleClick} />
       </div>
     </div>

@@ -1,9 +1,9 @@
 /**
  * stand3d.js
- * The reading stand as real 3D geometry (CSS 3D, no flat drawing): the top of a Roman
- * column on a thick stepped base, with the book resting on a marble wedge. Round parts
- * are rings of flat facets (20 around, 16 for the fluted shaft); each facet is lit from
- * a fixed light direction, so the shading changes smoothly around the column.
+ * Building blocks for the reading stand as real 3D geometry (CSS 3D, no flat drawing): blocks,
+ * rings of flat facets (each lit from a fixed light direction, so shading changes smoothly
+ * around a column), a wedge for the book, and the stand wrapper. The column itself is in
+ * ionic.js. The book rests on a marble wedge.
  * Everything is positioned relative to the center of the abacus' top surface, with y
  * pointing down (negative y is above the abacus).
  */
@@ -17,6 +17,7 @@ const BRASS_LIGHT = [246, 222, 150];
 const BRASS_SHADOW = [96, 68, 22];
 const ROUND_FACETS = 20;                                  // facets around a smooth round part
 const SHAFT_FACETS = 16;                                  // flutes around the column shaft
+const FACET_OVERLAP_PX = 1.2;                             // facets are drawn this much wider than needed so no seam shows between them
 const VEIN_TILE_PX = 256;                                 // size of the repeating vein texture (drawn in texture.js)
 const STAND_TILT_X_DEG = -17;                             // the camera looks down on the stand
 const STAND_TURN_Y_DEG = 16;                              // and sees it from slightly to the left, so the book's spine shows
@@ -29,7 +30,7 @@ const WEDGE_BACK_H = 86;
 const CORNER_MARKERS = html`<${React.Fragment}><span className="tap-ring" />
   <span className="corner" style=${{ left: 0, top: 0 }} /><span className="corner" style=${{ left: '100%', top: 0 }} />
   <span className="corner" style=${{ left: '100%', top: '100%' }} /><span className="corner" style=${{ left: 0, top: '100%' }} /><//>`;   // zero-size points whose on-screen positions tell the stage exactly where the cover is
-const FLOOR_Y = 234;                                      // bottom of the base, in stand coordinates
+const FLOOR_Y = 246;                                      // bottom of the base, in stand coordinates
 
 /**
  * How brightly a surface with the given outward normal is lit.
@@ -85,20 +86,21 @@ function Box3D({ w, h, d, y, tint = 'marble', z = 0 }) {
 
 /**
  * A round part (cylinder or cone frustum) built from flat facets.
- * @param {{rTop: number, rBottom: number, h: number, y: number, facets?: number, fluted?: boolean, tint?: string}} props
- *   radii at the top and bottom, height, y of the top, facet count, flutes, tint
+ * @param {{rTop: number, rBottom: number, h: number, y: number, facets?: number, fluted?: boolean, tint?: string, veins?: boolean, tile?: string}} props
+ *   radii at the top and bottom, height, y of the top, facet count, flutes, tint, whether to add marble veins, and an optional
+ *   CSS image drawn once on every facet (used for egg-and-dart)
  * @returns {React.ReactElement} Facets
  */
-function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false, tint = 'marble', veins: withVeins = true }) {
+function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false, tint = 'marble', veins: withVeins = true, tile = '' }) {
   const half = Math.PI / facets;
   const slant = Math.hypot(h, rBottom - rTop);
   const tilt = Math.atan2(rBottom - rTop, h);             // positive when the part is narrower at the top
   const wTop = 2 * rTop * Math.sin(half);
   const wBottom = 2 * rBottom * Math.sin(half);
-  const wMax = Math.max(wTop, wBottom);
+  const wMax = Math.max(wTop, wBottom) + FACET_OVERLAP_PX;
   const apothem = ((rTop + rBottom) / 2) * Math.cos(half);   // distance from the axis to the middle of a facet
-  const topInset = (wMax - wTop) / 2;
-  const bottomInset = (wMax - wBottom) / 2;
+  const topInset = (wMax - wTop - FACET_OVERLAP_PX) / 2;
+  const bottomInset = (wMax - wBottom - FACET_OVERLAP_PX) / 2;
   const clip = `polygon(${topInset}px 0, calc(100% - ${topInset}px) 0, calc(100% - ${bottomInset}px) 100%, ${bottomInset}px 100%)`;
   const lightAt = (degrees) => {
     const a = (degrees * Math.PI) / 180;
@@ -113,12 +115,15 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
     const gradient = fluted
       ? `linear-gradient(90deg, ${colorOf(left * 0.62)} 0%, ${colorOf(mid * 1.02)} 30%, ${colorOf(mid)} 62%, ${colorOf(right * 0.7)} 100%)`   // each flute is a shallow groove
       : `linear-gradient(90deg, ${colorOf(left)}, ${colorOf(right)})`;
-    const veins = tint === 'brass' || !withVeins ? '' : 'var(--vein), ';   // small rings skip the texture: it is invisible at that size and costs paint time
-    const layered = veins !== '';
+    const veins = tint === 'brass' || !withVeins ? '' : 'on';   // brass and plain rings skip the marble veins
+    const layers = [];                                     // [image, size, repeat, position] from top to bottom
+    if (tile) layers.push([tile, '100% 100%', 'no-repeat', '0 0']);
+    if (veins !== '') layers.push(['var(--vein)', `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px`, 'repeat', `${-i * 41}px ${-y}px`]);
+    layers.push([gradient, '100% 100%', 'no-repeat', '0 0']);
     return html`<div key=${i} className="f3" style=${{ left: -wMax / 2, top: y + h / 2 - slant / 2, width: wMax, height: slant,
       transform: `rotateY(${theta}deg) translateZ(${apothem}px) rotateX(${(tilt * 180) / Math.PI}deg)`, clipPath: clip, WebkitClipPath: clip,
-      backgroundImage: veins + gradient, backgroundSize: layered ? `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px, 100% 100%` : '100% 100%', backgroundRepeat: layered ? 'repeat, no-repeat' : 'no-repeat',
-      backgroundPosition: layered ? `${-i * 41}px ${-y}px, 0 0` : '0 0' }} />`;
+      backgroundImage: layers.map((l) => l[0]).join(', '), backgroundSize: layers.map((l) => l[1]).join(', '),
+      backgroundRepeat: layers.map((l) => l[2]).join(', '), backgroundPosition: layers.map((l) => l[3]).join(', ') }} />`;
   })}<//>`;
 }
 
@@ -154,28 +159,45 @@ function Wedge3D() {
 }
 
 /**
- * The whole stand with the book resting on it. The book is a real 3D book so tapping it
- * can hand over to the stage with the same shape.
- * Memoized so picking the book does not redraw its ~190 facets (the book is hidden by toggling a class).
- * @param {{book: (Object|null), W: number, H: number, D: number, onBookClick: function}} props
+ * Whether the column has been rendered into an image yet.
+ * @returns {boolean} True when STAND_IMAGE holds a picture
+ */
+function hasStandImage() {
+  return typeof STAND_IMAGE !== 'undefined' && STAND_IMAGE !== null;
+}
+
+/**
+ * The photographed column. It must be a flat child of the scene (not inside the 3D group), drawn
+ * before it, so the live book is always in front of it.
+ * @returns {React.ReactElement} Image placed in scene pixels
+ */
+function StandImage() {
+  return html`<img className="stand-image" alt="" draggable="false" src=${STAND_IMAGE.src}
+    style=${{ left: STAND_IMAGE.left, top: STAND_IMAGE.top, width: STAND_IMAGE.width, height: STAND_IMAGE.height }} />`;
+}
+
+/**
+ * The live part of the stand. The column never moves, so at runtime it is one image (STAND_IMAGE,
+ * made by renderStand.mjs from the 3D parts in ionic.js, drawn by StandImage); only the book and its brass
+ * lip stay live 3D, in exactly the same camera, so they line up with the picture. Without the
+ * image (before it has been rendered) the 3D column is drawn directly. In render mode
+ * (`staticOnly`) only the column is drawn, which is what gets photographed.
+ * Memoized so picking the book does not redraw anything (the book is hidden by toggling a class).
+ * @param {{book: (Object|null), W: number, H: number, D: number, onBookClick: function, staticOnly?: boolean}} props
  *   W, H, D are the book's width, height and thickness
  * @returns {React.ReactElement} Stand scene content (position it inside a perspective container)
  */
-const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick }) {
-  return html`<div className="stand3d" style=${{ transform: `rotateX(${STAND_TILT_X_DEG}deg) rotateY(${STAND_TURN_Y_DEG}deg) scale(${STAND_SCALE})` }}>
-    <div className="floor-shadow" style=${{ top: FLOOR_Y - 170, transform: 'rotateX(90deg)' }} />
-    <${Box3D} w=${196} h=${16} d=${196} y=${218} /><${Box3D} w=${172} h=${34} d=${172} y=${184} />
-    <${Disc3D} r=${60} y=${176} /><${Frustum3D} rTop=${58} rBottom=${60} h=${8} y=${176} veins=${false} />
-    <${Disc3D} r=${54} y=${170} /><${Frustum3D} rTop=${52} rBottom=${56} h=${6} y=${170} veins=${false} />
-    <${Frustum3D} rTop=${42} rBottom=${49} h=${126} y=${44} facets=${SHAFT_FACETS} fluted=${true} />
-    <${Frustum3D} rTop=${47} rBottom=${47} h=${3} y=${41} tint="brass" /><${Frustum3D} rTop=${45} rBottom=${45} h=${3} y=${38} tint="brass" />
-    <${Frustum3D} rTop=${62} rBottom=${46} h=${22} y=${16} veins=${false} />
-    <${Box3D} w=${146} h=${6} d=${146} y=${10} /><${Box3D} w=${158} h=${10} d=${158} y=${0} />
-    <${Wedge3D} />
-    <${Box3D} w=${W + 14} h=${5} d=${6} y=${-5} z=${BOOK_REST_Z - 3} tint="brass" />
-    ${book && html`<div className="rest-book" data-book-id=${book.id} style=${{ left: -W / 2, top: -H, width: W, height: H,
-      transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
-      <${BookBox} book=${book} W=${W} H=${H} D=${D} withPages=${false}
-        onCoverClick=${onBookClick} coverExtras=${CORNER_MARKERS} />
-    </div>`}
-  </div>`;});
+const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick, staticOnly = false }) {
+  const useImage = !staticOnly && hasStandImage();
+  return html`<${React.Fragment}>
+    <div className="stand3d" style=${{ transform: `rotateX(${STAND_TILT_X_DEG}deg) rotateY(${STAND_TURN_Y_DEG}deg) scale(${STAND_SCALE})` }}>
+      ${!useImage && html`<${IonicColumn} />`}
+      ${!staticOnly && html`<${Box3D} w=${W + 14} h=${5} d=${6} y=${-5} z=${BOOK_REST_Z - 3} tint="brass" />`}
+      ${!staticOnly && book && html`<div className="rest-book" data-book-id=${book.id} style=${{ left: -W / 2, top: -H, width: W, height: H,
+        transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
+        <${BookBox} book=${book} W=${W} H=${H} D=${D} withPages=${false}
+          onCoverClick=${onBookClick} coverExtras=${CORNER_MARKERS} />
+      </div>`}
+    </div>
+  <//>`;
+});

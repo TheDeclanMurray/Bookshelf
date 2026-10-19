@@ -181,4 +181,20 @@ function App() {
   </div><//><//>`;
 }
 
-ReactDOM.createRoot(document.getElementById('app')).render(html`<${App} />`);
+/**
+ * Page used only by renderStand.mjs: the column alone, on a transparent background, in the same
+ * place and camera as the reading screen, so a photograph of it lines up with the live book.
+ * Open the built page with #render-stand to see it.
+ * @returns {React.ReactElement} The static part of the stand
+ */
+function StandRenderPage() {
+  return html`<div className="reading case" data-theme="mahogany" style=${{ position: 'absolute', left: FRAME_SIDE_GUTTER, top: 0 }}>
+    <div className="scene"><div className="stand-anchor" style=${{ left: SCENE_ANCHOR_X, top: STAND_TOP_Y }}>
+      <${MarbleStand} book=${null} W=${READING_BOOK_W} H=${READING_BOOK_H} D=${READING_BOOK_D} onBookClick=${null} staticOnly=${true} />
+    </div></div>
+  </div>`;
+}
+
+const renderingStand = window.location.hash === '#render-stand';
+if (renderingStand) document.documentElement.classList.add('render-stand');
+ReactDOM.createRoot(document.getElementById('app')).render(renderingStand ? html`<${StandRenderPage} />` : html`<${App} />`);

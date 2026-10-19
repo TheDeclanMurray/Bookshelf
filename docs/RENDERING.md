@@ -47,8 +47,23 @@ Picking a book (221) and swiping to a new screen (253) are mostly mounting new c
 ## The handoff between shelf and stage
 The stage book is a separate 3D object. To avoid a jump, `poseSolver.js` solves for the exact pose that puts its face on top of the real spine (or the stand book's cover), using the corners measured on screen and the same perspective as the stage. Measured gap at rest: 0-1 px. The solver is unit tested.
 
+## Static parts are photographed once
+Anything that never moves is drawn once into an image instead of being kept as live elements.
+- **The stand's Ionic column** (plinth, Attic base, 24-flute shaft, scroll capital, abacus, wedge) is built in 3D in `ionic.js`/`stand3d.js`, photographed by `npm run render:stand` (Playwright, 3x pixel ratio, transparent background) into `assets/stand.webp` (84 KB) and embedded by `standAsset.js`. Only the book and its brass lip stay live, in the identical camera, so they line up with the picture.
+- Result (headless Chromium): 3D layers on the Currently Reading screen 142 -> 4, page elements 610 -> 472, and returning to the stand after swiping away went from 6 fps for a second to 61 fps straight away.
+- Re-run the render whenever `ionic.js`, `stand3d.js` or `texture.js` change: `npm run build:prototype && npm run render:stand && npm run build:prototype`.
+- The image must be a flat child of the scene, drawn before the 3D group. Inside the group it would sit at depth 0 and hide the upper part of the leaning book.
+
+## Next candidates (measured on the Fantasy bookcase: 221 elements)
+| Part | Elements | Notes |
+|---|---|---|
+| 19 spines | 143 (about 7.5 each), all using a `multiply` blend overlay | Biggest. One bitmap per book would be 1 element each with no blend |
+| Bookcase frame (crown, pilasters, boards, plinth) | 78 | Same for every book in a theme: one image per theme (14 themes) |
+
+Spine bitmaps are drawn once per book on a canvas (title on its side, author, series sticker, bands) at 3x pixel ratio, about 20 KB each, and cached in the browser (IndexedDB) and optionally in S3 so a new device or a sibling's phone does not redraw them and the stage's 3D book can use the same picture. The cache key is book id + design version + pixel ratio, so a design change simply makes new pictures. Fonts must be loaded before drawing. Frames are photographed at build time like the stand.
+
 ## Known costs and ideas, in order of payoff
-1. **Layer count on the Currently Reading screen (about 140 facets of 3D marble).** Fine on a GPU, heavy in software rendering. If an iPhone stutters, options are fewer facets, or rendering the column once into an image.
+1. ~~Layer count on the Currently Reading screen~~ Done: the column is an image.
 2. **Covers and spines are re-rasterized at different sizes.** Could be rendered once to a bitmap and reused.
 3. **Three.js (one canvas, one draw call per object, real lighting)** would handle the stand better than ~140 DOM layers. Already planned as a comparison test after the MVP.
 4. **Measure on the real phone** with Safari Web Inspector (Timelines and Layers) before optimizing further.
