@@ -87,6 +87,12 @@ Cost: the page grew from about 135 KB to about 1 MB (the pictures are embedded),
 ### Rule: photographed pictures must ignore host image rules
 Pages that host the prototype (the claude.ai Artifact wrapper) apply `img { max-width: 100% }`. A photographed picture wider than its box (the 452 px bookcase frame in a 360 px case) is then shrunk but keeps its negative offset, so it sits off-centre. `.case-frame` and `.stand-image` therefore set `max-width: none; max-height: none`. Any new photographed image needs the same. To test, inject `<style>img{max-width:100%}</style>` before the page and check the frame is still centred.
 
+### Rule: hide the side wall at the end of a shelf put-back
+The stage is above the shelf, so nothing covers the book's cover edge as it slides home. `bookStage.js` clips `.stage-clip` (the flat perspective wrapper) to the spine's projected width over 30-85% of the put-back. Never put `clip-path` on the 3D book itself: it flattens it.
+
+### Rule: a shelf book is seen face-on at its slot
+`.stage-clip`'s `perspective-origin` is the slot centre at the shelf and the stage centre when displayed, animated together with the pose (same duration and easing). `solveLaunchPose` is solved against the slot centre and the result is shifted into the stage's frame. Anything that changes the perspective origin must keep the pose solver in step.
+
 ## Known costs and ideas, in order of payoff
 1. ~~Layer count on the Currently Reading screen~~ Done: the column is an image.
 2. **Covers and spines are re-rasterized at different sizes.** Could be rendered once to a bitmap and reused.

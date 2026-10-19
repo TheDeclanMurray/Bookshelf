@@ -22,6 +22,13 @@ const OPEN_MS = 560;                                      // cover swing and rec
 const COVER_CLOSE_MS = 240;                               // closing the cover before the book moves
 const COVER_CLOSE_OVERLAP = 0.7;                          // the book starts moving when the cover is this far through closing
 const PUT_BACK_MS = 380;                                  // display (or open) pose -> slot
+const SLOT_CLIP_START = 0.3;                              // the side wall starts being hidden this far through the put-back (0-1)
+const SLOT_CLIP_END = 0.85;                               // ...and is completely hidden by here, so none shows while the book settles
+const SLOT_CLIP_PAD_PX = 0.5;                             // the clip window is this much wider than the spine, so its edges are not shaved
+const SLOT_CLIP_EASE_POWER = 3;                           // how sharply the clip closes in (1 = steadily)
+const SLIDE_MID_OFFSET = 0.4;                             // the put-back's middle keyframe sits this far through the (eased) motion
+const SLIDE_MID_PLACE = 1;                                // ...by then the book's position is this far toward the slot (0-1)
+const SLIDE_MID_SHAPE = 0.78;                             // ...but its size and turn only this far, so it comes in at shelf height, then pushes into the slot
 const HINT_OPEN = 'Tap the cover to open';
 const HINT_CLOSE = 'Tap outside to put it back';
 const COVER_CLOSED = 'rotateY(0deg)';
@@ -103,13 +110,24 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   const liftRef = useRef(null);                           // swings the book toward you and back
   const hingeRef = useRef(null);                          // swings the front cover
   const dimRef = useRef(null);
+  const clipRef = useRef(null);                           // flat perspective wrapper; clipped to the spine at the end of a shelf put-back
+  const clipFrameRef = useRef(0);                         // pending animation frame of that clip
 
   // Book size on the stage; the launch pose and thickness are solved so the book lands exactly on the real object
   const W = SL.clamp((vp.w - 24) / 2, BOOK_MIN_W, BOOK_MAX_W);
   const H = Math.round(W * BOOK_ASPECT);
   const anchorX = vp.w / 2;
   const anchorY = vp.h * STAGE_ANCHOR_Y;
-  const { pose: launchPose, D } = useMemo(() => solveLaunchPose({ launch, W, H, anchorX, anchorY }), [launch, W, H, anchorX, anchorY]);
+  // A shelf book is viewed from straight in front of its own slot (so only its spine shows, never its top or sides, on any
+  // shelf); the viewpoint then glides to the stage centre as the book comes out. A stand book keeps the stage centre.
+  const slotX = isShelf ? launch.rect.cx : anchorX;
+  const slotY = isShelf ? launch.rect.cy : anchorY;
+  const slotOrigin = `${slotX}px ${slotY}px`;
+  const stageOrigin = `${anchorX}px ${anchorY}px`;
+  const { pose: launchPose, D } = useMemo(() => {
+    const solved = solveLaunchPose({ launch, W, H, anchorX: slotX, anchorY: slotY });   // solved relative to the slot's viewpoint...
+    return { D: solved.D, pose: { ...solved.pose, x: solved.pose.x + slotX - anchorX, y: solved.pose.y + slotY - anchorY } };   // ...then moved to the stage's frame
+  }, [launch, W, H, slotX, slotY, anchorX, anchorY]);
   const scale0 = launch.rect.h / H;                       // nominal size at the start, used for the spine's decoration scale
   const displayScale = Math.min(1.45, (vp.w - 48) / (W + D * 0.5), (vp.h * 0.6) / H);
   const openScale = Math.min(1.25, (vp.w - 16) / (2 * W), (vp.h * 0.8) / H);
@@ -132,6 +150,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     poseRef.current.style.transform = launchT;            // in place before the first paint
     Promise.all([
       playMotion(poseRef.current, [{ transform: launchT }, { transform: displayT }], { duration: PULL_OUT_MS, easing: EASE_OUT }),
+      playMotion(clipRef.current, [{ perspectiveOrigin: slotOrigin }, { perspectiveOrigin: stageOrigin }], { duration: PULL_OUT_MS, easing: EASE_OUT }),
       playMotion(liftRef.current, hump, { duration: PULL_OUT_MS, easing: 'linear' }),
     ]).then(([moved]) => {
       if (!moved || phaseRef.current !== 'launching') return;   // interrupted by an early close
@@ -139,16 +158,49 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
       setPagesReady(true);
       setHint(HINT_OPEN);
     });
-    return () => { settleMotion(poseRef.current); settleMotion(liftRef.current); settleMotion(hingeRef.current); };
+    return () => { cancelAnimationFrame(clipFrameRef.current); settleMotion(poseRef.current); settleMotion(liftRef.current); settleMotion(hingeRef.current); };
   }, []);
 
+  /**
+   * Hides the book's side wall as it slides home. With real perspective a book left of or at the centre shows its
+   * cover edge until it is in the slot, where its neighbours would cover it. The stage is clipped sideways to the
+   * spine's own on-screen width, widening from the full screen to that width over the end of the motion.
+   */
+  const clipToSlot = () => {
+    const clip = clipRef.current;
+    const spine = poseRef.current.querySelector('[data-face="spine"]');
+    if (!clip || !spine) return;
+    const step = () => {
+      const motion = poseRef.current.__motion;             // follow the book's own motion clock, so the two never drift apart
+      const done = motion ? SL.clamp(Number(motion.currentTime) / PUT_BACK_MS, 0, 1) : 0;
+      const linear = SL.clamp((done - SLOT_CLIP_START) / (SLOT_CLIP_END - SLOT_CLIP_START), 0, 1);
+      const t = 1 - Math.pow(1 - linear, SLOT_CLIP_EASE_POWER);   // closes fast at first, so the sliver is gone before the book lands
+      if (t > 0) {
+        const box = spine.getBoundingClientRect();        // the spine's projected bounds this frame
+        const left = (box.left - SLOT_CLIP_PAD_PX) * t;
+        const right = (vp.w - box.right - SLOT_CLIP_PAD_PX) * t;
+        clip.style.clipPath = `inset(0px ${Math.max(0, right)}px 0px ${Math.max(0, left)}px)`;
+      }
+      if (linear < 1) clipFrameRef.current = requestAnimationFrame(step);
+    };
+    clipFrameRef.current = requestAnimationFrame(step);
+  };
+
   /** Slides the book back into its slot and ends the stage. */
-  const moveBack = (knownFrom) => {
+  const moveBack = (knownFrom, sourcePose) => {
+    if (isShelf) clipToSlot();
     dimRef.current.classList.remove('is-on');
     if (isShelf) poseRef.current.classList.add('in-slot');   // darken the page edges again on the way back into the shadow
     if (!isShelf) onReturning();                          // the stand's book fades back in underneath
     playMotionTo(liftRef.current, { transform: LIFT_FLAT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT });
-    playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom })
+    // A straight line from the big pose to the slot dips the book below its shelf board on the way (it is nearer the camera,
+    // so its bottom edge projects lower). A middle keyframe brings it to shelf height first, then it pushes in.
+    const via = isShelf ? { transform: poseTransform(blendPose(sourcePose, poses.launch, SLIDE_MID_PLACE, SLIDE_MID_SHAPE)), offset: SLIDE_MID_OFFSET } : undefined;
+    if (isShelf) {   // the viewpoint returns to the slot, so the book ends (and is seen going in) face-on
+      playMotionTo(clipRef.current, { perspectiveOrigin: slotOrigin }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: { perspectiveOrigin: stageOrigin },
+        via: { perspectiveOrigin: slotOrigin, offset: SLIDE_MID_OFFSET } });
+    }
+    playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom, via })
       .then((finished) => { if (finished) onClose(); });
   };
 
@@ -162,9 +214,9 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
       const atRest = was === 'open';
       playMotionTo(hingeRef.current, { transform: COVER_CLOSED }, { duration: COVER_CLOSE_MS, easing: EASE_IN_OUT, from: atRest ? { transform: COVER_OPEN } : undefined });
       // The book starts moving just before the cover lands, so there is no dead pause between the two
-      setTimeout(() => moveBack(atRest ? { transform: openT } : undefined), COVER_CLOSE_MS * COVER_CLOSE_OVERLAP);
+      setTimeout(() => moveBack(atRest ? { transform: openT } : undefined, poses.open), COVER_CLOSE_MS * COVER_CLOSE_OVERLAP);
     } else {
-      moveBack(was === 'display' ? { transform: displayT } : undefined);
+      moveBack(was === 'display' ? { transform: displayT } : undefined, poses.display);
     }
   };
 
@@ -182,9 +234,10 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     });
   }, [displayT, openT]);
 
-  return html`<div className="stage" style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: `${anchorX}px ${anchorY}px` }} onClick=${requestClose}>
+  return html`<div className="stage" onClick=${requestClose}>
     <div className="stage-dim" ref=${dimRef} />
     <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
+    <div className="stage-clip" ref=${clipRef} style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: slotOrigin }}>
     <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>
       <div className="book3d" ref=${poseRef} style=${{ left: -W / 2, top: -H / 2, width: W, height: H }}>
         <div className="book-lift" ref=${liftRef}>
@@ -192,6 +245,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
             hingeRef=${hingeRef} onCoverClick=${openCover} withPages=${pagesReady} />
         </div>
       </div>
+    </div>
     </div>
     <div className="stage-hint">${hint}</div>
   </div>`;

@@ -141,7 +141,9 @@ button { font: inherit; color: inherit; }
 .reading-empty { position: absolute; left: 30px; right: 30px; top: 300px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
 
 /* ------------------------------------------------------------------- stage */
-.stage { position: fixed; inset: 0; z-index: 50; touch-action: none; }   /* perspective is set from bookStage.js */
+.stage { position: fixed; inset: 0; z-index: 50; touch-action: none; }
+.stage-clip { position: absolute; inset: 0; pointer-events: none; }   /* flat perspective wrapper (set from bookStage.js); clipped to the spine at the end of a put-back */
+.stage-clip > * { pointer-events: auto; }
 .stage-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, rgba(30,18,10,.72), rgba(6,3,2,.93)); opacity: 0; transition: opacity 0.3s ease-out; }
 .stage-dim.is-on { opacity: 1; }
 .stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; transform-style: preserve-3d; }   /* preserve-3d lets the book receive the stage's perspective */
