@@ -1,4 +1,4 @@
-import { SL, html, motion, useCallback, useLayoutEffect, useMemo, useRef, useState } from './reactSetup';
+import { SL, motion, useCallback, useLayoutEffect, useMemo, useRef, useState } from './reactSetup';
 import { PoseSolver } from './poseSolver';
 import { EASE_IN_OUT, EASE_OPEN, EASE_OUT, blendPose, playMotion, playMotionTo, poseTransform, settleMotion } from './stageMotion';
 import { BookBox } from './book3d';
@@ -239,21 +239,21 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     });
   }, [displayT, openT]);
 
-  return html`<div className="stage" onClick=${requestClose}>
-    <div className="stage-dim" ref=${dimRef} />
-    <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
-    <div className="stage-clip" ref=${clipRef} style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: slotOrigin }}>
-    <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>
-      <div className="book3d" ref=${poseRef} style=${{ left: -W / 2, top: -H / 2, width: W, height: H }}>
-        <div className="book-lift" ref=${liftRef}>
-          <${BookBox} book=${book} allBooks=${allBooks} today=${today} W=${W} H=${H} D=${D} spineUnit=${isShelf ? 1 / scale0 : undefined}
-            hingeRef=${hingeRef} onCoverClick=${openCover} withPages=${pagesReady} />
+  return (<div className="stage" onClick={requestClose}>
+    <div className="stage-dim" ref={dimRef}  />
+    <button className="stage-close" aria-label="Put the book back" onClick={(e) => { e.stopPropagation(); requestClose(); }}>×</button>
+    <div className="stage-clip" ref={clipRef} style={{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: slotOrigin }}>
+    <div className="stage-anchor" onClick={(e) => e.stopPropagation()}>
+      <div className="book3d" ref={poseRef} style={{ left: -W / 2, top: -H / 2, width: W, height: H }}>
+        <div className="book-lift" ref={liftRef}>
+          <BookBox book={book} allBooks={allBooks} today={today} W={W} H={H} D={D} spineUnit={isShelf ? 1 / scale0 : undefined}
+            hingeRef={hingeRef} onCoverClick={openCover} withPages={pagesReady}  />
         </div>
       </div>
     </div>
     </div>
-    <div className="stage-hint">${hint}</div>
-  </div>`;
+    <div className="stage-hint">{hint}</div>
+  </div>);
 }
 
 export { STAGE_ANCHOR_Y, STAGE_PERSPECTIVE_PX, SOLVE_PASSES, BOOK_MIN_W, BOOK_MAX_W, BOOK_ASPECT, PULL_DEPTH_PX, DISPLAY_TILT_Y, DISPLAY_TILT_X, PULL_OUT_MS, OPEN_MS, COVER_CLOSE_MS, COVER_CLOSE_OVERLAP, PUT_BACK_MS, SLOT_CLIP_START, SLOT_CLIP_END, SLOT_CLIP_PAD_PX, SLOT_CLIP_EASE_POWER, SLIDE_MID_OFFSET, SLIDE_MID_PLACE, SLIDE_MID_SHAPE, HINT_OPEN, HINT_CLOSE, COVER_CLOSED, COVER_OPEN, LIFT_FLAT, launchFaceCorners, solveLaunchPose, buildPoses, BookStage };

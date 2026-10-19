@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview --host",
     "e2e": "playwright test",
-    "test:prototype": "node --test \"src/tests/*.test.mjs\""
+    "test:prototype": "node --test \"src/tests/*.test.mjs\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@fontsource/cinzel": "^5.3.0",
@@ -28,13 +29,16 @@
     "@fontsource/playfair-display": "^5.3.0",
     "@fontsource/special-elite": "^5.3.0",
     "framer-motion": "^10.18.0",
-    "htm": "^3.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",
+    "@types/node": "^26.6.5",
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
     "vite": "^8.3.4",
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.0.5"

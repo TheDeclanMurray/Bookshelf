@@ -1,6 +1,7 @@
-import { React, SL, html, isRealTap, memo, noteTapStart } from './reactSetup';
+import { React, SL, isRealTap, memo, noteTapStart } from './reactSetup';
 import { SpineImage } from './art';
 import { CASE_FRAMES } from './caseAsset';
+import type { BookcaseProps, SpineButtonProps } from './types';
 
 /**
  * bookcase.js
@@ -21,16 +22,16 @@ const STUD_YS = [34, 150, 266, 382, 498];                               // brass
  */
 function CrownTrim() {
   const trim = { stroke: 'var(--trim)', fill: 'none' };
-  return html`<svg viewBox="0 0 360 96" aria-hidden="true">
-    <path d="M 0 63 H 360" ...${trim} strokeWidth="1.6" opacity="0.85" />
-    <path d="M 0 68 H 360" ...${trim} strokeWidth="0.8" opacity="0.5" />
-    <path d="M 74 63 Q 76 34 180 31 Q 284 34 286 63" ...${trim} strokeWidth="1.4" opacity="0.7" />
-    <path d="M 60 64 C 40 66 34 50 46 48 C 54 47 56 56 50 58" ...${trim} strokeWidth="1.8" opacity="0.8" />
-    <path d="M 300 64 C 320 66 326 50 314 48 C 306 47 304 56 310 58" ...${trim} strokeWidth="1.8" opacity="0.8" />
-    <path d="M 180 18 V 8" ...${trim} strokeWidth="2" /><circle cx="180" cy="8" r="5" style=${{ fill: 'var(--trim)' }} />
-    <circle cx="40" cy="40" r="4" style=${{ fill: 'var(--trim)' }} /><circle cx="320" cy="40" r="4" style=${{ fill: 'var(--trim)' }} />
-    ${DENTIL_XS.map((x, i) => html`<rect key=${i} x=${x} y="80" width="5.5" height="8" style=${{ fill: 'var(--w3)' }} opacity="0.85" />`)}
-  </svg>`;
+  return (<svg viewBox="0 0 360 96" aria-hidden="true">
+    <path d="M 0 63 H 360" {...trim} strokeWidth="1.6" opacity="0.85"  />
+    <path d="M 0 68 H 360" {...trim} strokeWidth="0.8" opacity="0.5"  />
+    <path d="M 74 63 Q 76 34 180 31 Q 284 34 286 63" {...trim} strokeWidth="1.4" opacity="0.7"  />
+    <path d="M 60 64 C 40 66 34 50 46 48 C 54 47 56 56 50 58" {...trim} strokeWidth="1.8" opacity="0.8"  />
+    <path d="M 300 64 C 320 66 326 50 314 48 C 306 47 304 56 310 58" {...trim} strokeWidth="1.8" opacity="0.8"  />
+    <path d="M 180 18 V 8" {...trim} strokeWidth="2"  /><circle cx="180" cy="8" r="5" style={{ fill: 'var(--trim)' }}  />
+    <circle cx="40" cy="40" r="4" style={{ fill: 'var(--trim)' }}  /><circle cx="320" cy="40" r="4" style={{ fill: 'var(--trim)' }}  />
+    {DENTIL_XS.map((x, i) => <rect key={i} x={x} y="80" width="5.5" height="8" style={{ fill: 'var(--w3)' }} opacity="0.85"  />)}
+  </svg>);
 }
 
 /**
@@ -38,8 +39,8 @@ function CrownTrim() {
  * @returns {React.ReactElement} Pilaster element
  */
 function Pilaster() {
-  return html`<div className="pilaster wood"><span className="cap" />
-    ${STUD_YS.map((y) => html`<span key=${y} className="stud" style=${{ top: y }} />`)}<span className="foot" /></div>`;
+  return (<div className="pilaster wood"><span className="cap"  />
+    {STUD_YS.map((y) => <span key={y} className="stud" style={{ top: y }}  />)}<span className="foot"  /></div>);
 }
 
 /**
@@ -48,16 +49,16 @@ function Pilaster() {
  * @param {{placed: {book: Object, thickness: number, height: number}, onPick: function}} props
  * @returns {React.ReactElement} Button containing the spine picture
  */
-const SpineButton = memo(function SpineButton({ placed, onPick }) {
+const SpineButton = memo(function SpineButton({ placed, onPick }: SpineButtonProps) {
   const { book, thickness, height } = placed;
   const handleClick = (event) => {
     if (!isRealTap(event)) return;                        // ignore the touch that ends a swipe
     onPick(book, event.currentTarget);
   };
-  return html`<button className="spine" data-book-id=${book.id} style=${{ width: thickness, height }}
-    aria-label=${`${book.title} by ${book.author}`} onPointerDown=${noteTapStart} onClick=${handleClick}>
-    <${SpineImage} book=${book} width=${thickness} height=${height} />
-  </button>`;
+  return (<button className="spine" data-book-id={book.id} style={{ width: thickness, height }}
+    aria-label={`${book.title} by ${book.author}`} onPointerDown={noteTapStart} onClick={handleClick}>
+    <SpineImage book={book} width={thickness} height={height}  />
+  </button>);
 });
 
 /**
@@ -75,8 +76,8 @@ function hasCaseFrames() {
  */
 function CaseFrameImage({ theme }) {
   const place = CASE_FRAMES.placement;
-  return html`<img className="case-frame" alt="" draggable="false" src=${CASE_FRAMES.images[theme] || CASE_FRAMES.images.mahogany}
-    style=${{ left: place.left, top: place.top, width: place.width, height: place.height }} />`;
+  return (<img className="case-frame" alt="" draggable="false" src={CASE_FRAMES.images[theme] || CASE_FRAMES.images.mahogany}
+    style={{ left: place.left, top: place.top, width: place.width, height: place.height }}  />);
 }
 
 /**
@@ -90,31 +91,31 @@ function CaseFrameImage({ theme }) {
  *   the plaque and sort button (so they are not photographed)
  * @returns {React.ReactElement} Bookcase element
  */
-const Bookcase = memo(function Bookcase({ room, onPick, onCycleSort, frame = 'auto', labels = true }) {
+const Bookcase = memo(function Bookcase({ room, onPick, onCycleSort, frame = 'auto', labels = true }: BookcaseProps) {
   const photo = frame === 'photo' || (frame === 'auto' && hasCaseFrames());
   const sortLabel = SL.SORT_MODES.find((m) => m.key === room.sortMode).label;
   // Pad to a full set of shelves so a nearly empty case still looks like furniture
   const shelves = room.shelves.concat(Array.from({ length: SL.SHELVES_PER_CASE - room.shelves.length }, () => []));
-  return html`<div className=${'case' + (photo ? ' is-photo' : '')} data-theme=${room.theme}>
-    ${photo && html`<${CaseFrameImage} theme=${room.theme} />`}
+  return (<div className={'case' + (photo ? ' is-photo' : '')} data-theme={room.theme}>
+    {photo && <CaseFrameImage theme={room.theme}  />}
     <div className="crown">
-      ${!photo && html`<${React.Fragment}><div className="wood" style=${{ position: 'absolute', inset: 0, clipPath: CROWN_WOOD_CLIP, WebkitClipPath: CROWN_WOOD_CLIP,
-        backgroundImage: 'var(--grain), linear-gradient(180deg, rgba(255,255,255,.2), rgba(0,0,0,.05) 45%, rgba(0,0,0,.45))' }} /><${CrownTrim} /><//>`}
-      ${labels && html`<${React.Fragment}><div className="plaque"><div className="plaque-title">${room.title}</div>
-        <div className="plaque-sub">${room.bookCount} ${room.bookCount === 1 ? 'book' : 'books'} · ${sortLabel}</div></div>
-      <button className="sort-btn" aria-label=${`Change order. Now: ${sortLabel}`} onClick=${() => onCycleSort(room.groupKey)}>⇅</button><//>`}
+      {!photo && (<React.Fragment><div className="wood" style={{ position: 'absolute', inset: 0, clipPath: CROWN_WOOD_CLIP, WebkitClipPath: CROWN_WOOD_CLIP,
+        backgroundImage: 'var(--grain), linear-gradient(180deg, rgba(255,255,255,.2), rgba(0,0,0,.05) 45%, rgba(0,0,0,.45))' }}  /><CrownTrim  /></React.Fragment>)}
+      {labels && (<React.Fragment><div className="plaque"><div className="plaque-title">{room.title}</div>
+        <div className="plaque-sub">{room.bookCount} {room.bookCount === 1 ? 'book' : 'books'} · {sortLabel}</div></div>
+      <button className="sort-btn" aria-label={`Change order. Now: ${sortLabel}`} onClick={() => onCycleSort(room.groupKey)}>⇅</button></React.Fragment>)}
     </div>
     <div className="case-body">
-      ${photo ? html`<div className="pilaster-space" />` : html`<${Pilaster} />`}
+      {photo ? <div className="pilaster-space"  /> : <Pilaster  />}
       <div className="interior">
-        ${shelves.map((shelf, i) => html`<div className="shelf" key=${i}>
-          <div className="books">${shelf.map((placed) => html`<${SpineButton} key=${placed.book.id} placed=${placed} onPick=${onPick} />`)}</div>
-          ${photo ? html`<div className="board-space" />` : html`<div className="board" />`}
-        </div>`)}
+        {shelves.map((shelf, i) => (<div className="shelf" key={i}>
+          <div className="books">{shelf.map((placed) => <SpineButton key={placed.book.id} placed={placed} onPick={onPick}  />)}</div>
+          {photo ? <div className="board-space"  /> : <div className="board"  />}
+        </div>))}
       </div>
-      ${photo ? html`<div className="pilaster-space" />` : html`<${Pilaster} />`}
+      {photo ? <div className="pilaster-space"  /> : <Pilaster  />}
     </div>
-    <div className=${photo ? 'plinth-space' : 'plinth'} />
-  </div>`;});
+    <div className={photo ? 'plinth-space' : 'plinth'}  />
+  </div>);});
 
 export { CROWN_WOOD_CLIP, DENTIL_XS, STUD_YS, CrownTrim, Pilaster, SpineButton, hasCaseFrames, CaseFrameImage, Bookcase };

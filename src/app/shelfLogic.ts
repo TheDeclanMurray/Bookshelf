@@ -289,7 +289,7 @@ const ShelfLogic = (function () {
    *          Bookcases, each holding shelves of placed books
    * @throws {RangeError} If an option is not positive
    */
-  function packIntoCases(books, options = {}) {
+  function packIntoCases(books, options: { shelfWidth?: number; shelvesPerCase?: number } = {}) {
     const shelfWidth = options.shelfWidth || SHELF_INNER_WIDTH_PX;
     const shelvesPerCase = options.shelvesPerCase || SHELVES_PER_CASE;
     if (shelfWidth <= 0 || shelvesPerCase < 1) {
@@ -349,7 +349,7 @@ const ShelfLogic = (function () {
    */
   function groupBooks(books, genres) {
     const known = new Set(genres.map((g) => g.key));
-    const groups = { reading: [], tbr: [], dnf: [], youth: [], byGenre: {} };
+    const groups: { reading: any[]; tbr: any[]; dnf: any[]; youth: any[]; byGenre: Record<string, any[]> } = { reading: [], tbr: [], dnf: [], youth: [], byGenre: {} };
     for (const book of books) {
       if (book.status === 'reading') groups.reading.push(book);
       else if (book.status === 'tbr') groups.tbr.push(book);
@@ -372,7 +372,7 @@ const ShelfLogic = (function () {
    * @param {{genres?: Object[], sortModes?: Object}} [options] - Genre list and a sort mode per group key
    * @returns {Object[]} Rooms: {id, kind: 'case'|'reading', title, theme, ...}
    */
-  function buildRooms(books, options = {}) {
+  function buildRooms(books, options: { genres?: any[]; sortModes?: Record<string, string> } = {}) {
     const genres = options.genres || GENRES;
     const sortModes = options.sortModes || {};
     const groups = groupBooks(books, genres);
@@ -489,7 +489,7 @@ const ShelfLogic = (function () {
    * @returns {Object<string, {size: number, bg: string, text: string, ring: string}>} Style by series name
    */
   function buildSeriesStyles(books) {
-    const bySeries = {};
+    const bySeries: Record<string, any[]> = {};
     for (const book of books) {
       if (!book.series || !book.seriesNumber) continue;   // only numbered series books get stickers
       (bySeries[book.series] = bySeries[book.series] || []).push(book);

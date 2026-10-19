@@ -2,12 +2,13 @@ import './fonts';
 import * as ReactDOM from 'react-dom/client';
 import './styles.css';
 import { FakeData } from './fakeData';
-import { DragGuard, MotionConfig, SL, SeriesStyleContext, animate, html, motion, useCallback, useEffect, useMemo, useMotionValue, useRef, useState } from './reactSetup';
+import { DragGuard, MotionConfig, SL, SeriesStyleContext, animate, motion, useCallback, useEffect, useMemo, useMotionValue, useRef, useState } from './reactSetup';
 import { SpineCache } from './spineCache';
 import { Bookcase } from './bookcase';
 import { BOOK_REST_DEG, MarbleStand, STAND_TILT_X_DEG, STAND_TURN_Y_DEG } from './stand3d';
 import { READING_BOOK_D, READING_BOOK_H, READING_BOOK_W, ReadingRoom, SCENE_ANCHOR_X, STAND_TOP_Y } from './readingRoom';
 import { BookStage } from './bookStage';
+import type { Book, Launch, PagerProps, ScreenFrameProps, SwipeTrackProps } from './types';
 
 /**
  * app.js
@@ -21,7 +22,7 @@ const FRAME_H = 700;                                      // logical height of e
 const FRAME_SIDE_GUTTER = 16;                             // minimum space left and right of a screen
 const PAGER_HEIGHT = 58;                                  // room kept at the bottom for the page dots
 const MAX_FRAME_SCALE = 1.3;                              // do not blow screens up beyond this on large displays
-const SNAP_SPRING = { type: 'spring', stiffness: 260, damping: 34 };
+const SNAP_SPRING = { type: 'spring', stiffness: 260, damping: 34 } as const;
 const SWIPE_DISTANCE_FRACTION = 0.1;                      // dragging this fraction of the screen width changes screens
 const SWIPE_MIN_DISTANCE_PX = 28;                         // ...but never less than this many pixels
 const SWIPE_MAX_DISTANCE_PX = 56;                         // ...and never more than this, on wide screens
@@ -49,10 +50,10 @@ function useViewport() {
  * @param {{vp: {w: number, h: number}, children: *}} props - Window size and the screen content
  * @returns {React.ReactElement} Scaled, centered frame
  */
-function ScreenFrame({ vp, children }) {
+function ScreenFrame({ vp, children }: ScreenFrameProps) {
   const scale = Math.min((vp.w - FRAME_SIDE_GUTTER * 2) / FRAME_W, (vp.h - PAGER_HEIGHT - 8) / FRAME_H, MAX_FRAME_SCALE);
   const top = Math.max(4, (vp.h - PAGER_HEIGHT - FRAME_H * scale) / 2);   // center vertically in the space above the dots
-  return html`<div className="frame" style=${{ width: FRAME_W, marginLeft: -FRAME_W / 2, top, transform: `scale(${scale})` }}>${children}</div>`;
+  return <div className="frame" style={{ width: FRAME_W, marginLeft: -FRAME_W / 2, top, transform: `scale(${scale})` }}>{children}</div>;
 }
 
 /**
@@ -61,7 +62,7 @@ function ScreenFrame({ vp, children }) {
  *   renderScreen(i) returns the content of screen i; only screens near the current one are drawn
  * @returns {React.ReactElement} Track element
  */
-function SwipeTrack({ count, index, onIndex, vp, renderScreen }) {
+function SwipeTrack({ count, index, onIndex, vp, renderScreen }: SwipeTrackProps) {
   const x = useMotionValue(-index * vp.w);
 
   // Animate to the current screen whenever the index changes; jump (no animation) when the window resizes
@@ -84,12 +85,12 @@ function SwipeTrack({ count, index, onIndex, vp, renderScreen }) {
     setTimeout(() => { DragGuard.dragging = false; }, DRAG_GUARD_RESET_MS);
   };
 
-  return html`<${motion.div} className="track" style=${{ x, width: count * vp.w }} drag="x" dragDirectionLock dragElastic=${0.12}
-    dragConstraints=${{ left: -(count - 1) * vp.w, right: 0 }} dragMomentum=${false}
-    onDragStart=${() => { DragGuard.dragging = true; }} onDragEnd=${onDragEnd}>
-    ${Array.from({ length: count }, (_, i) => html`<div className="slot" key=${i} style=${{ width: vp.w }}>
-      ${Math.abs(i - index) <= 1 ? renderScreen(i) : null}</div>`)}
-  <//>`;
+  return (<motion.div className="track" style={{ x, width: count * vp.w }} drag="x" dragDirectionLock dragElastic={0.12}
+    dragConstraints={{ left: -(count - 1) * vp.w, right: 0 }} dragMomentum={false}
+    onDragStart={() => { DragGuard.dragging = true; }} onDragEnd={onDragEnd}>
+    {Array.from({ length: count }, (_, i) => (<div className="slot" key={i} style={{ width: vp.w }}>
+      {Math.abs(i - index) <= 1 ? renderScreen(i) : null}</div>))}
+  </motion.div>);
 }
 
 /**
@@ -97,12 +98,12 @@ function SwipeTrack({ count, index, onIndex, vp, renderScreen }) {
  * @param {{rooms: Object[], index: number, onIndex: function, showHint: boolean}} props - Screens, current index, jump handler, hint visibility
  * @returns {React.ReactElement} Pager element
  */
-function Pager({ rooms, index, onIndex, showHint }) {
-  return html`<div className="pager">
-    <div className=${'hint' + (showHint ? '' : ' is-hidden')}>Swipe between bookcases</div>
-    <div className="pips">${rooms.map((room, i) => html`<button key=${room.id} className=${'pip' + (room.kind === 'reading' ? ' is-reading' : '')}
-      aria-label=${room.title} aria-current=${i === index} onClick=${() => onIndex(i)} />`)}</div>
-  </div>`;
+function Pager({ rooms, index, onIndex, showHint }: PagerProps) {
+  return (<div className="pager">
+    <div className={'hint' + (showHint ? '' : ' is-hidden')}>Swipe between bookcases</div>
+    <div className="pips">{rooms.map((room, i) => (<button key={room.id} className={'pip' + (room.kind === 'reading' ? ' is-reading' : '')}
+      aria-label={room.title} aria-current={i === index} onClick={() => onIndex(i)}  />))}</div>
+  </div>);
 }
 
 /**
@@ -115,7 +116,7 @@ function Pager({ rooms, index, onIndex, showHint }) {
 function launchFromElement(kind, element, extras) {
   const box = element.getBoundingClientRect();
   // A stand book has four marker points on its cover; a spine is a flat rectangle, so its own corners are used
-  const markers = Array.from(element.querySelectorAll('.corner'));
+  const markers = Array.from(element.querySelectorAll('.corner')) as Element[];
   const corners = markers.length === 4
     ? markers.map((marker) => { const point = marker.getBoundingClientRect(); return [point.left, point.top]; })
     : [[box.left, box.top], [box.right, box.top], [box.right, box.bottom], [box.left, box.bottom]];
@@ -180,17 +181,17 @@ function App() {
   const renderScreen = (i) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
-      ? html`<${ReadingRoom} room=${room} onPickReading=${pickReading} today=${today} />`
-      : html`<${Bookcase} room=${room} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
-    return html`<${ScreenFrame} vp=${vp}>${content}<//>`;
+      ? <ReadingRoom room={room} onPickReading={pickReading} today={today}  />
+      : <Bookcase room={room} onPick={pickFromShelf} onCycleSort={cycleSort}  />;
+    return <ScreenFrame vp={vp}>{content}</ScreenFrame>;
   };
 
-  return html`<${MotionConfig} reducedMotion="user"><${SeriesStyleContext.Provider} value=${seriesStyles}><div id="app-inner" style=${{ height: '100%' }}>
-    <${SwipeTrack} count=${rooms.length} index=${safeIndex} onIndex=${setIndex} vp=${vp} renderScreen=${renderScreen} />
-    <${Pager} rooms=${rooms} index=${safeIndex} onIndex=${setIndex} showHint=${showHint} />
-    ${picked && html`<${BookStage} key=${picked.book.id} book=${picked.book} allBooks=${books} today=${today} launch=${picked.launch} vp=${vp}
-      onReturning=${() => setSceneBookHidden(picked.book.id, false)} onClose=${() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }} />`}
-  </div><//><//>`;
+  return (<MotionConfig reducedMotion="user"><SeriesStyleContext.Provider value={seriesStyles}><div id="app-inner" style={{ height: '100%' }}>
+    <SwipeTrack count={rooms.length} index={safeIndex} onIndex={setIndex} vp={vp} renderScreen={renderScreen}  />
+    <Pager rooms={rooms} index={safeIndex} onIndex={setIndex} showHint={showHint}  />
+    {picked && (<BookStage key={picked.book.id} book={picked.book} allBooks={books} today={today} launch={picked.launch} vp={vp}
+      onReturning={() => setSceneBookHidden(picked.book.id, false)} onClose={() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }}  />)}
+  </div></SeriesStyleContext.Provider></MotionConfig>);
 }
 
 /**
@@ -200,11 +201,11 @@ function App() {
  * @returns {React.ReactElement} The static part of the stand
  */
 function StandRenderPage() {
-  return html`<div className="reading case" data-theme="mahogany" style=${{ position: 'absolute', left: FRAME_SIDE_GUTTER, top: 0 }}>
-    <div className="scene"><div className="stand-anchor" style=${{ left: SCENE_ANCHOR_X, top: STAND_TOP_Y }}>
-      <${MarbleStand} book=${null} W=${READING_BOOK_W} H=${READING_BOOK_H} D=${READING_BOOK_D} onBookClick=${null} staticOnly=${true} />
+  return (<div className="reading case" data-theme="mahogany" style={{ position: 'absolute', left: FRAME_SIDE_GUTTER, top: 0 }}>
+    <div className="scene"><div className="stand-anchor" style={{ left: SCENE_ANCHOR_X, top: STAND_TOP_Y }}>
+      <MarbleStand book={null} W={READING_BOOK_W} H={READING_BOOK_H} D={READING_BOOK_D} onBookClick={null} staticOnly={true}  />
     </div></div>
-  </div>`;
+  </div>);
 }
 
 /**
@@ -213,11 +214,11 @@ function StandRenderPage() {
  * @param {{theme: string}} props - Wood theme
  * @returns {React.ReactElement} The frame, drawn live so it can be photographed
  */
-function CaseRenderPage({ theme }) {
+function CaseRenderPage({ theme }: { theme: string }) {
   const room = { id: 'render', kind: 'case', groupKey: 'render', title: '', theme, shelves: [], bookCount: 0, sortMode: 'library' };
-  return html`<div style=${{ position: 'absolute', left: CASE_RENDER_MARGIN_PX, top: CASE_RENDER_MARGIN_PX }}>
-    <${Bookcase} room=${room} frame="live" labels=${false} onPick=${null} onCycleSort=${null} />
-  </div>`;
+  return (<div style={{ position: 'absolute', left: CASE_RENDER_MARGIN_PX, top: CASE_RENDER_MARGIN_PX }}>
+    <Bookcase room={room} frame="live" labels={false} onPick={null} onCycleSort={null}  />
+  </div>);
 }
 
 /**
@@ -232,7 +233,7 @@ async function startPage() {
   const rendering = hash === '#render-stand' || caseTheme !== null;
   if (rendering) document.documentElement.classList.add('render-static');
   else await SpineCache.prepare();
-  const content = caseTheme !== null ? html`<${CaseRenderPage} theme=${caseTheme} />` : hash === '#render-stand' ? html`<${StandRenderPage} />` : html`<${App} />`;
+  const content = caseTheme !== null ? <CaseRenderPage theme={caseTheme}  /> : hash === '#render-stand' ? <StandRenderPage  /> : <App  />;
   ReactDOM.createRoot(document.getElementById('app')).render(content);
 }
 

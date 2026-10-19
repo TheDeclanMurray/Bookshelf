@@ -179,7 +179,7 @@ const FakeData = (function () {
    * @param {number} [finishMs] - Finish time; random when omitted
    * @returns {{startedAt: string, finishedAt: string}} YYYY-MM-DD dates
    */
-  function makeReadDates(rand, finishMs) {
+  function makeReadDates(rand, finishMs?: number) {
     const finished = finishMs !== undefined ? finishMs : FIRST_READ_DAY + Math.floor(rand() * READ_SPAN_DAYS) * MS_PER_DAY;
     const started = finished - (4 + Math.floor(rand() * 26)) * MS_PER_DAY;   // 4 to 29 days earlier
     return { startedAt: isoFromMs(started), finishedAt: isoFromMs(finished) };

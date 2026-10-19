@@ -1,5 +1,5 @@
-import { React, html } from './reactSetup';
-import { Box3D, Disc3D, FACET_OVERLAP_PX, FLOOR_Y, Frustum3D, VEIN_TILE_PX, Wedge3D, lightAmount, surfaceColor } from './stand3d';
+import { React } from './reactSetup';
+import { Box3D, Disc3D, flatPaint, FACET_OVERLAP_PX, FLOOR_Y, Frustum3D, VEIN_TILE_PX, Wedge3D, lightAmount, surfaceColor } from './stand3d';
 
 /**
  * ionic.js
@@ -59,14 +59,14 @@ function Volute3D({ x, z, front }) {
   const size = VOLUTE_R * 2;
   const mirrored = x > 0;                                 // the two scrolls on a face wind toward each other
   const transform = front ? `translateZ(${z}px)` : `translateZ(${-z}px) rotateY(180deg)`;
-  return html`<div className="f3" style=${{ left: x - VOLUTE_R, top: VOLUTE_Y - VOLUTE_R, width: size, height: size, borderRadius: '50%', transform,
+  return (<div className="f3" style={{ left: x - VOLUTE_R, top: VOLUTE_Y - VOLUTE_R, width: size, height: size, borderRadius: '50%', transform,
     ...flatPaint('marble', lightAmount([0, 0, front ? 1 : -1]) + 0.08, front ? 3 : 4, 0), boxShadow: 'inset 0 0 0 1.4px rgba(58,62,76,.55), inset 2px 2px 3px rgba(255,255,255,.55), inset -2px -3px 4px rgba(40,44,60,.35)' }}>
-    <svg viewBox=${`0 0 ${size} ${size}`} style=${{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-      <polyline points=${spiralPoints(VOLUTE_R, mirrored)} fill="none" stroke=${LINE_LIGHT} strokeWidth="2.6" transform="translate(0.7 0.9)" />
-      <polyline points=${spiralPoints(VOLUTE_R, mirrored)} fill="none" stroke=${LINE_DARK} strokeWidth="1.5" />
-      <circle cx=${VOLUTE_R} cy=${VOLUTE_R} r="2.2" fill="#d9b865" stroke=${LINE_DARK} strokeWidth="0.6" />
+    <svg viewBox={`0 0 ${size} ${size}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+      <polyline points={spiralPoints(VOLUTE_R, mirrored)} fill="none" stroke={LINE_LIGHT} strokeWidth="2.6" transform="translate(0.7 0.9)"  />
+      <polyline points={spiralPoints(VOLUTE_R, mirrored)} fill="none" stroke={LINE_DARK} strokeWidth="1.5"  />
+      <circle cx={VOLUTE_R} cy={VOLUTE_R} r="2.2" fill="#d9b865" stroke={LINE_DARK} strokeWidth="0.6"  />
     </svg>
-  </div>`;
+  </div>);
 }
 
 /**
@@ -78,13 +78,13 @@ function Canalis3D({ front }) {
   const width = (VOLUTE_X - VOLUTE_R * 0.4) * 2;
   const clip = `path("M 0 0 H ${width} V 7 Q ${width / 2} 25 0 7 Z")`;
   const transform = front ? `translateZ(${CAPITAL_DEPTH / 2 - 1}px)` : `translateZ(${-(CAPITAL_DEPTH / 2 - 1)}px) rotateY(180deg)`;
-  return html`<div className="f3" style=${{ left: -width / 2, top: CAPITAL_TOP_Y, width, height: 26, transform, clipPath: clip, WebkitClipPath: clip,
+  return (<div className="f3" style={{ left: -width / 2, top: CAPITAL_TOP_Y, width, height: 26, transform, clipPath: clip, WebkitClipPath: clip,
     ...flatPaint('marble', lightAmount([0, 0, front ? 1 : -1]) + 0.05, front ? 6 : 8, 0) }}>
-    <svg viewBox=${`0 0 ${width} 26`} style=${{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-      <path d=${`M 0 7 Q ${width / 2} 25 ${width} 7`} fill="none" stroke=${LINE_DARK} strokeWidth="1.6" />
-      <path d=${`M 0 4 Q ${width / 2} 21 ${width} 4`} fill="none" stroke=${LINE_DARK} strokeWidth="0.8" />
+    <svg viewBox={`0 0 ${width} 26`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+      <path d={`M 0 7 Q ${width / 2} 25 ${width} 7`} fill="none" stroke={LINE_DARK} strokeWidth="1.6"  />
+      <path d={`M 0 4 Q ${width / 2} 21 ${width} 4`} fill="none" stroke={LINE_DARK} strokeWidth="0.8"  />
     </svg>
-  </div>`;
+  </div>);
 }
 
 /**
@@ -94,10 +94,10 @@ function Canalis3D({ front }) {
  */
 function Cushion3D({ x }) {
   // Built as an upright cylinder, then laid on its side so its length runs front to back
-  return html`<div className="f3-group" style=${{ transform: `translate3d(${x}px, ${VOLUTE_Y}px, 0px) rotateX(90deg)` }}>
-    <${Frustum3D} rTop=${VOLUTE_R - 1} rBottom=${VOLUTE_R - 1} h=${CAPITAL_DEPTH - 2} y=${-(CAPITAL_DEPTH - 2) / 2} facets=${18} veins=${false} />
-    <${Frustum3D} rTop=${VOLUTE_R + 1.2} rBottom=${VOLUTE_R + 1.2} h=${5} y=${-2.5} facets=${18} tint="brass" />
-  </div>`;
+  return (<div className="f3-group" style={{ transform: `translate3d(${x}px, ${VOLUTE_Y}px, 0px) rotateX(90deg)` }}>
+    <Frustum3D rTop={VOLUTE_R - 1} rBottom={VOLUTE_R - 1} h={CAPITAL_DEPTH - 2} y={-(CAPITAL_DEPTH - 2) / 2} facets={18} veins={false}  />
+    <Frustum3D rTop={VOLUTE_R + 1.2} rBottom={VOLUTE_R + 1.2} h={5} y={-2.5} facets={18} tint="brass"  />
+  </div>);
 }
 
 /**
@@ -116,8 +116,8 @@ function IonicShaft3D() {
   }
   const lightAt = (degrees) => { const a = (degrees * Math.PI) / 180; return lightAmount([Math.sin(a) * Math.cos(tilt), -Math.sin(tilt), Math.cos(a) * Math.cos(tilt)]); };
   // A solid core just inside the flutes so the hairline gaps between them show shaded marble, not the page behind
-  const core = html`<${Frustum3D} rTop=${rTop - 2} rBottom=${rBottom - 2} h=${h} y=${y} facets=${12} veins=${false} />`;
-  return html`<${React.Fragment}>${core}${pieces.map((piece, i) => {
+  const core = <Frustum3D rTop={rTop - 2} rBottom={rBottom - 2} h={h} y={y} facets={12} veins={false}  />;
+  return (<React.Fragment>{core}{pieces.map((piece, i) => {
     const half = (piece.span * Math.PI) / 360;
     const wTop = 2 * rTop * Math.sin(half), wBottom = 2 * rBottom * Math.sin(half);
     const wMax = Math.max(wTop, wBottom) + FACET_OVERLAP_PX;
@@ -130,11 +130,11 @@ function IonicShaft3D() {
     const right = piece.flute ? lightAt(piece.theta - edge) * 1.04 : lightAt(piece.theta);
     const mid = piece.flute ? (left + right) / 2 : lightAt(piece.theta) * 1.08;
     const gradient = `linear-gradient(90deg, ${surfaceColor('marble', left)}, ${surfaceColor('marble', mid)} 50%, ${surfaceColor('marble', right)})`;
-    return html`<div key=${i} className="f3" style=${{ left: -wMax / 2, top: y + h / 2 - slant / 2, width: wMax, height: slant,
+    return (<div key={i} className="f3" style={{ left: -wMax / 2, top: y + h / 2 - slant / 2, width: wMax, height: slant,
       transform: `rotateY(${piece.theta}deg) translateZ(${apothem}px) rotateX(${(tilt * 180) / Math.PI}deg)`, clipPath: clip, WebkitClipPath: clip,
       backgroundImage: `var(--vein), ${gradient}`, backgroundSize: `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px, 100% 100%`, backgroundRepeat: 'repeat, no-repeat',
-      backgroundPosition: `${-i * 29}px ${-y}px, 0 0`, boxShadow: piece.flute ? 'inset 0 0 0 0.5px rgba(58,62,76,.35)' : 'none' }} />`;
-  })}<//>`;
+      backgroundPosition: `${-i * 29}px ${-y}px, 0 0`, boxShadow: piece.flute ? 'inset 0 0 0 0.5px rgba(58,62,76,.35)' : 'none' }}  />);
+  })}</React.Fragment>);
 }
 
 /**
@@ -143,24 +143,24 @@ function IonicShaft3D() {
  * @returns {React.ReactElement} Static stand parts
  */
 function IonicColumn() {
-  return html`<${React.Fragment}>
-    <div className="floor-shadow" style=${{ top: FLOOR_Y - 170, transform: 'rotateX(90deg)' }} />
-    <${Box3D} w=${196} h=${16} d=${196} y=${230} /><${Box3D} w=${172} h=${34} d=${172} y=${196} />
-    <${Disc3D} r=${52} y=${196} /><${Frustum3D} rTop=${52} rBottom=${53} h=${3} y=${193} veins=${false} />
-    <${Frustum3D} rTop=${47} rBottom=${52} h=${3} y=${190} veins=${false} /><${Frustum3D} rTop=${47} rBottom=${47} h=${4} y=${186} veins=${false} />
-    <${Frustum3D} rTop=${42} rBottom=${47} h=${2} y=${184} veins=${false} /><${Frustum3D} rTop=${40} rBottom=${42} h=${4} y=${180} veins=${false} />
-    <${Frustum3D} rTop=${42} rBottom=${40} h=${3} y=${177} veins=${false} /><${Frustum3D} rTop=${46} rBottom=${42} h=${3} y=${174} veins=${false} />
-    <${Frustum3D} rTop=${44} rBottom=${46} h=${3} y=${171} veins=${false} />
-    <${IonicShaft3D} />
-    <${Frustum3D} rTop=${34.5} rBottom=${34.5} h=${4} y=${25} tint="brass" facets=${24} />
-    <${Frustum3D} rTop=${40} rBottom=${34} h=${16} y=${10} facets=${24} tile=${EGG_TILE} veins=${false} />
-    <${Cushion3D} x=${-VOLUTE_X} /><${Cushion3D} x=${VOLUTE_X} />
-    <${Volute3D} x=${-VOLUTE_X} z=${CAPITAL_DEPTH / 2} front=${true} /><${Volute3D} x=${VOLUTE_X} z=${CAPITAL_DEPTH / 2} front=${true} />
-    <${Volute3D} x=${-VOLUTE_X} z=${CAPITAL_DEPTH / 2} front=${false} /><${Volute3D} x=${VOLUTE_X} z=${CAPITAL_DEPTH / 2} front=${false} />
-    <${Canalis3D} front=${true} /><${Canalis3D} front=${false} />
-    <${Box3D} w=${ABACUS_W - 8} h=${4} d=${ABACUS_D - 8} y=${6} /><${Box3D} w=${ABACUS_W} h=${6} d=${ABACUS_D} y=${0} />
-    <${Wedge3D} />
-  <//>`;
+  return (<React.Fragment>
+    <div className="floor-shadow" style={{ top: FLOOR_Y - 170, transform: 'rotateX(90deg)' }}  />
+    <Box3D w={196} h={16} d={196} y={230}  /><Box3D w={172} h={34} d={172} y={196}  />
+    <Disc3D r={52} y={196}  /><Frustum3D rTop={52} rBottom={53} h={3} y={193} veins={false}  />
+    <Frustum3D rTop={47} rBottom={52} h={3} y={190} veins={false}  /><Frustum3D rTop={47} rBottom={47} h={4} y={186} veins={false}  />
+    <Frustum3D rTop={42} rBottom={47} h={2} y={184} veins={false}  /><Frustum3D rTop={40} rBottom={42} h={4} y={180} veins={false}  />
+    <Frustum3D rTop={42} rBottom={40} h={3} y={177} veins={false}  /><Frustum3D rTop={46} rBottom={42} h={3} y={174} veins={false}  />
+    <Frustum3D rTop={44} rBottom={46} h={3} y={171} veins={false}  />
+    <IonicShaft3D  />
+    <Frustum3D rTop={34.5} rBottom={34.5} h={4} y={25} tint="brass" facets={24}  />
+    <Frustum3D rTop={40} rBottom={34} h={16} y={10} facets={24} tile={EGG_TILE} veins={false}  />
+    <Cushion3D x={-VOLUTE_X}  /><Cushion3D x={VOLUTE_X}  />
+    <Volute3D x={-VOLUTE_X} z={CAPITAL_DEPTH / 2} front={true}  /><Volute3D x={VOLUTE_X} z={CAPITAL_DEPTH / 2} front={true}  />
+    <Volute3D x={-VOLUTE_X} z={CAPITAL_DEPTH / 2} front={false}  /><Volute3D x={VOLUTE_X} z={CAPITAL_DEPTH / 2} front={false}  />
+    <Canalis3D front={true}  /><Canalis3D front={false}  />
+    <Box3D w={ABACUS_W - 8} h={4} d={ABACUS_D - 8} y={6}  /><Box3D w={ABACUS_W} h={6} d={ABACUS_D} y={0}  />
+    <Wedge3D  />
+  </React.Fragment>);
 }
 
 export { ABACUS_W, ABACUS_D, VOLUTE_R, CAPITAL_DEPTH, VOLUTE_X, CAPITAL_TOP_Y, VOLUTE_Y, SHAFT_TOP_Y, SHAFT_BASE_Y, SHAFT_FLUTES, FLUTE_SHARE, VOLUTE_TURNS, SPIRAL_STEPS, LINE_DARK, LINE_LIGHT, EGG_TILE, spiralPoints, Volute3D, Canalis3D, Cushion3D, IonicShaft3D, IonicColumn };

@@ -1,7 +1,8 @@
-import { React, html, memo } from './reactSetup';
+import { React, memo } from './reactSetup';
 import { BookBox } from './book3d';
 import { STAND_IMAGE } from './standAsset';
 import { IonicColumn } from './ionic';
+import type { MarbleStandProps } from './types';
 
 /**
  * stand3d.js
@@ -32,9 +33,9 @@ const BOOK_REST_DEG = 55;                                 // book leans back thi
 const WEDGE_W = 132;
 const WEDGE_DEPTH = 124;
 const WEDGE_BACK_H = 86;
-const CORNER_MARKERS = html`<${React.Fragment}><span className="tap-ring" />
-  <span className="corner" style=${{ left: 0, top: 0 }} /><span className="corner" style=${{ left: '100%', top: 0 }} />
-  <span className="corner" style=${{ left: '100%', top: '100%' }} /><span className="corner" style=${{ left: 0, top: '100%' }} /><//>`;   // zero-size points whose on-screen positions tell the stage exactly where the cover is
+const CORNER_MARKERS = (<React.Fragment><span className="tap-ring"  />
+  <span className="corner" style={{ left: 0, top: 0 }}  /><span className="corner" style={{ left: '100%', top: 0 }}  />
+  <span className="corner" style={{ left: '100%', top: '100%' }}  /><span className="corner" style={{ left: 0, top: '100%' }}  /></React.Fragment>);   // zero-size points whose on-screen positions tell the stage exactly where the cover is
 const FLOOR_Y = 246;                                      // bottom of the base, in stand coordinates
 
 /**
@@ -85,8 +86,8 @@ function Box3D({ w, h, d, y, tint = 'marble', z = 0 }) {
     { id: 'left', fw: d, fh: h, top: y, t: `translateZ(${z}px) rotateY(-90deg) translateZ(${w / 2}px)`, n: [-1, 0, 0] },
     { id: 'top', fw: w, fh: d, top: y - d / 2, t: `translateZ(${z}px) rotateX(90deg)`, n: [0, -1, 0] },
   ];
-  return html`<${React.Fragment}>${faces.map((f, i) => html`<div key=${f.id} className="f3 f3-edge" style=${{ left: -f.fw / 2, top: f.top, width: f.fw, height: f.fh,
-    transform: f.t, ...flatPaint(tint, lightAmount(f.n), i + h, y) }} />`)}<//>`;
+  return (<React.Fragment>{faces.map((f, i) => (<div key={f.id} className="f3 f3-edge" style={{ left: -f.fw / 2, top: f.top, width: f.fw, height: f.fh,
+    transform: f.t, ...flatPaint(tint, lightAmount(f.n), i + h, y) }}  />))}</React.Fragment>);
 }
 
 /**
@@ -111,7 +112,7 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
     const a = (degrees * Math.PI) / 180;
     return lightAmount([Math.sin(a) * Math.cos(tilt), -Math.sin(tilt), Math.cos(a) * Math.cos(tilt)]);
   };
-  return html`<${React.Fragment}>${Array.from({ length: facets }, (_, i) => {
+  return (<React.Fragment>{Array.from({ length: facets }, (_, i) => {
     const theta = (i * 360) / facets;                      // 0 faces the viewer; positive turns toward +x
     const left = lightAt(theta - 180 / facets);            // light at this facet's left and right edges
     const right = lightAt(theta + 180 / facets);
@@ -125,11 +126,11 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
     if (tile) layers.push([tile, '100% 100%', 'no-repeat', '0 0']);
     if (veins !== '') layers.push(['var(--vein)', `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px`, 'repeat', `${-i * 41}px ${-y}px`]);
     layers.push([gradient, '100% 100%', 'no-repeat', '0 0']);
-    return html`<div key=${i} className="f3" style=${{ left: -wMax / 2, top: y + h / 2 - slant / 2, width: wMax, height: slant,
+    return (<div key={i} className="f3" style={{ left: -wMax / 2, top: y + h / 2 - slant / 2, width: wMax, height: slant,
       transform: `rotateY(${theta}deg) translateZ(${apothem}px) rotateX(${(tilt * 180) / Math.PI}deg)`, clipPath: clip, WebkitClipPath: clip,
       backgroundImage: layers.map((l) => l[0]).join(', '), backgroundSize: layers.map((l) => l[1]).join(', '),
-      backgroundRepeat: layers.map((l) => l[2]).join(', '), backgroundPosition: layers.map((l) => l[3]).join(', ') }} />`;
-  })}<//>`;
+      backgroundRepeat: layers.map((l) => l[2]).join(', '), backgroundPosition: layers.map((l) => l[3]).join(', ') }}  />);
+  })}</React.Fragment>);
 }
 
 /**
@@ -138,8 +139,8 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
  * @returns {React.ReactElement} Disc
  */
 function Disc3D({ r, y, tint = 'marble' }) {
-  return html`<div className="f3" style=${{ left: -r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', transform: 'rotateX(90deg)',
-    ...flatPaint(tint, lightAmount([0, -1, 0]), 7, y) }} />`;
+  return (<div className="f3" style={{ left: -r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', transform: 'rotateX(90deg)',
+    ...flatPaint(tint, lightAmount([0, -1, 0]), 7, y) }}  />);
 }
 
 /**
@@ -153,14 +154,14 @@ function Wedge3D() {
   const sideTop = -WEDGE_BACK_H;
   const slopeNormal = [0, -Math.cos(Math.atan2(WEDGE_BACK_H, WEDGE_DEPTH)), Math.sin(Math.atan2(WEDGE_BACK_H, WEDGE_DEPTH))];
   const sideClip = { right: 'polygon(0 100%, 100% 100%, 100% 0)', left: 'polygon(0 0, 0 100%, 100% 100%)' };
-  const side = (key, rotation, normal) => html`<div key=${key} className="f3 f3-edge" style=${{ left: -WEDGE_DEPTH / 2, top: sideTop, width: WEDGE_DEPTH, height: WEDGE_BACK_H,
-    transform: `translateZ(${zMid}px) rotateY(${rotation}deg) translateZ(${WEDGE_W / 2}px)`, clipPath: sideClip[key], WebkitClipPath: sideClip[key], ...flatPaint('marble', lightAmount(normal), 3, 0) }} />`;
-  return html`<${React.Fragment}>
-    <div className="f3 f3-edge" style=${{ left: -WEDGE_W / 2, top: sideTop, width: WEDGE_W, height: WEDGE_BACK_H, transform: `translateZ(${zBack}px) rotateY(180deg)`, ...flatPaint('marble', AMBIENT_LIGHT, 5, 0) }} />
-    <div className="f3 f3-edge" style=${{ left: -WEDGE_W / 2, top: -WEDGE_BACK_H / 2 - slopeLen / 2, width: WEDGE_W, height: slopeLen,
-      transform: `translateZ(${zMid}px) rotateX(${BOOK_REST_DEG}deg)`, ...flatPaint('marble', lightAmount(slopeNormal), 9, 0) }} />
-    ${side('right', 90, [1, 0, 0])}${side('left', -90, [-1, 0, 0])}
-  <//>`;
+  const side = (key, rotation, normal) => (<div key={key} className="f3 f3-edge" style={{ left: -WEDGE_DEPTH / 2, top: sideTop, width: WEDGE_DEPTH, height: WEDGE_BACK_H,
+    transform: `translateZ(${zMid}px) rotateY(${rotation}deg) translateZ(${WEDGE_W / 2}px)`, clipPath: sideClip[key], WebkitClipPath: sideClip[key], ...flatPaint('marble', lightAmount(normal), 3, 0) }}  />);
+  return (<React.Fragment>
+    <div className="f3 f3-edge" style={{ left: -WEDGE_W / 2, top: sideTop, width: WEDGE_W, height: WEDGE_BACK_H, transform: `translateZ(${zBack}px) rotateY(180deg)`, ...flatPaint('marble', AMBIENT_LIGHT, 5, 0) }}  />
+    <div className="f3 f3-edge" style={{ left: -WEDGE_W / 2, top: -WEDGE_BACK_H / 2 - slopeLen / 2, width: WEDGE_W, height: slopeLen,
+      transform: `translateZ(${zMid}px) rotateX(${BOOK_REST_DEG}deg)`, ...flatPaint('marble', lightAmount(slopeNormal), 9, 0) }}  />
+    {side('right', 90, [1, 0, 0])}{side('left', -90, [-1, 0, 0])}
+  </React.Fragment>);
 }
 
 /**
@@ -177,8 +178,8 @@ function hasStandImage() {
  * @returns {React.ReactElement} Image placed in scene pixels
  */
 function StandImage() {
-  return html`<img className="stand-image" alt="" draggable="false" src=${STAND_IMAGE.src}
-    style=${{ left: STAND_IMAGE.left, top: STAND_IMAGE.top, width: STAND_IMAGE.width, height: STAND_IMAGE.height }} />`;
+  return (<img className="stand-image" alt="" draggable="false" src={STAND_IMAGE.src}
+    style={{ left: STAND_IMAGE.left, top: STAND_IMAGE.top, width: STAND_IMAGE.width, height: STAND_IMAGE.height }}  />);
 }
 
 /**
@@ -192,19 +193,19 @@ function StandImage() {
  *   W, H, D are the book's width, height and thickness
  * @returns {React.ReactElement} Stand scene content (position it inside a perspective container)
  */
-const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick, staticOnly = false }) {
+const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick, staticOnly = false }: MarbleStandProps) {
   const useImage = !staticOnly && hasStandImage();
-  return html`<${React.Fragment}>
-    <div className="stand3d" style=${{ transform: `rotateX(${STAND_TILT_X_DEG}deg) rotateY(${STAND_TURN_Y_DEG}deg) scale(${STAND_SCALE})` }}>
-      ${!useImage && html`<${IonicColumn} />`}
-      ${!staticOnly && html`<${Box3D} w=${W + 14} h=${5} d=${6} y=${-5} z=${BOOK_REST_Z - 3} tint="brass" />`}
-      ${!staticOnly && book && html`<div className="rest-book" data-book-id=${book.id} style=${{ left: -W / 2, top: -H, width: W, height: H,
+  return (<React.Fragment>
+    <div className="stand3d" style={{ transform: `rotateX(${STAND_TILT_X_DEG}deg) rotateY(${STAND_TURN_Y_DEG}deg) scale(${STAND_SCALE})` }}>
+      {!useImage && <IonicColumn  />}
+      {!staticOnly && <Box3D w={W + 14} h={5} d={6} y={-5} z={BOOK_REST_Z - 3} tint="brass"  />}
+      {!staticOnly && book && (<div className="rest-book" data-book-id={book.id} style={{ left: -W / 2, top: -H, width: W, height: H,
         transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
-        <${BookBox} book=${book} W=${W} H=${H} D=${D} withPages=${false}
-          onCoverClick=${onBookClick} coverExtras=${CORNER_MARKERS} />
-      </div>`}
+        <BookBox book={book} W={W} H={H} D={D} withPages={false}
+          onCoverClick={onBookClick} coverExtras={CORNER_MARKERS}  />
+      </div>)}
     </div>
-  <//>`;
+  </React.Fragment>);
 });
 
 export { LIGHT_DIR, AMBIENT_LIGHT, MARBLE_LIGHT, MARBLE_SHADOW, BRASS_LIGHT, BRASS_SHADOW, ROUND_FACETS, SHAFT_FACETS, FACET_OVERLAP_PX, VEIN_TILE_PX, STAND_TILT_X_DEG, STAND_TURN_Y_DEG, STAND_SCALE, BOOK_REST_Z, BOOK_REST_DEG, WEDGE_W, WEDGE_DEPTH, WEDGE_BACK_H, CORNER_MARKERS, FLOOR_Y, lightAmount, surfaceColor, flatPaint, Box3D, Frustum3D, Disc3D, Wedge3D, hasStandImage, StandImage, MarbleStand };

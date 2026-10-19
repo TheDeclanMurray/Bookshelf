@@ -91,7 +91,7 @@ function playMotion(element, frames, { duration, easing = EASE_OUT, delay = 0 })
  * @param {{duration: number, easing?: string, delay?: number, from?: Object, via?: Object}} options - Timing, a known start when the element is at rest, and an optional middle keyframe (end-value keys plus offset)
  * @returns {Promise<boolean>} Resolves true when it finished, false when interrupted
  */
-function playMotionTo(element, to, { from, via, ...timing }) {
+function playMotionTo(element, to, { from, via, ...timing }: { duration: number; easing?: string; delay?: number; from?: any; via?: any }) {
   const interrupted = !!element.__motion;
   settleMotion(element);
   const style = getComputedStyle(element);                // what is on screen right now

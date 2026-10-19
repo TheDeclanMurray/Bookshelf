@@ -4,13 +4,10 @@
  * build step), Framer Motion pieces, and the short alias for the logic module.
  */
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, memo } from 'react';
-import htm from 'htm';
-import * as Motion from 'framer-motion';
+import { motion, animate, useMotionValue, MotionConfig } from 'framer-motion';
 import { ShelfLogic } from './shelfLogic';
 
 const SL = ShelfLogic;                                    // short alias used by every UI file
-const html = htm.bind(React.createElement);               // html`<div className="x"/>` makes React elements
-const { motion, animate, useMotionValue, MotionConfig } = Motion;
 
 /**
  * Shared flag set while the swipe track is being dragged, so a finger that ends
@@ -43,4 +40,4 @@ function isRealTap(event) {
   return !DragGuard.dragging && Math.hypot(event.clientX - TapTracker.x, event.clientY - TapTracker.y) <= TAP_SLOP_PX;
 }
 
-export { TAP_SLOP_PX, TapTracker, noteTapStart, isRealTap, React, SL, html, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, memo, motion, animate, useMotionValue, MotionConfig, DragGuard, SeriesStyleContext };
+export { TAP_SLOP_PX, TapTracker, noteTapStart, isRealTap, React, SL, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, memo, motion, animate, useMotionValue, MotionConfig, DragGuard, SeriesStyleContext };

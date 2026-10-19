@@ -22,7 +22,7 @@ const SpineCache = (function () {
 
   const memory = new Map();                               // key -> picture URL
   const volatileKeys = new Set();                         // keys drawn without confirmed fonts: not saved, redrawn later
-  const listeners = new Set();                            // components to refresh when pictures are redrawn
+  const listeners = new Set<(epoch: number) => void>();                            // components to refresh when pictures are redrawn
   let database = null;
   let fontsReady = false;
   let epoch = 0;                                          // changes whenever pictures must be redrawn
@@ -90,7 +90,7 @@ const SpineCache = (function () {
    */
   function put(key, url, persist) {
     memory.set(key, url);
-    const mayPersist = persist && (fontsReady || window.__spineForcePersist === true);   // the flag lets tests exercise saving without web fonts
+    const mayPersist = persist && (fontsReady || (window as any).__spineForcePersist === true);   // the flag lets tests exercise saving without web fonts
     if (persist && !mayPersist) volatileKeys.add(key);
     if (mayPersist && database) {
       try { database.transaction(STORE, 'readwrite').objectStore(STORE).put({ url, createdAt: Date.now() }, key); } catch (error) { /* ignore */ }
@@ -136,7 +136,7 @@ const SpineCache = (function () {
    */
   function subscribe(listener) {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => { listeners.delete(listener); };
   }
 
   return { get, put, prepare, subscribe, getEpoch: () => epoch, size: () => memory.size };
