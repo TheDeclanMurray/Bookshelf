@@ -84,6 +84,9 @@ What stays live: the plaque and sort button, the tappable spines (now one `<img>
 | Spines drawn on a second visit | 29 | 0 |
 Cost: the page grew from about 135 KB to about 1 MB (the pictures are embedded), which is fine for a prototype. In the real app the pictures are separate cached files.
 
+### Rule: photographed pictures must ignore host image rules
+Pages that host the prototype (the claude.ai Artifact wrapper) apply `img { max-width: 100% }`. A photographed picture wider than its box (the 452 px bookcase frame in a 360 px case) is then shrunk but keeps its negative offset, so it sits off-centre. `.case-frame` and `.stand-image` therefore set `max-width: none; max-height: none`. Any new photographed image needs the same. To test, inject `<style>img{max-width:100%}</style>` before the page and check the frame is still centred.
+
 ## Known costs and ideas, in order of payoff
 1. ~~Layer count on the Currently Reading screen~~ Done: the column is an image.
 2. **Covers and spines are re-rasterized at different sizes.** Could be rendered once to a bitmap and reused.

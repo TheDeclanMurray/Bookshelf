@@ -16,6 +16,7 @@
   - [x] Round 5: fix put-back landing in the wrong place, fewer redraws (docs/RENDERING.md)
   - [x] Round 6: Ionic column, column rendered once as an image
   - [x] Round 7: spines drawn once and cached in the browser; bookcase frames photographed per theme (docs/RENDERING.md). Rendering work for Phase 0 is done
+  - [x] Round 7 fix: bookcase frames off-centre on the phone (host `img` max-width rule), confirmed fixed on device
   - [ ] **Try round 6 on the iPhone and report what feels off** (spines and frames look the same as before, swiping feels lighter, first launch time)
   - [x] Decide: stand or desk (stand, now marble)
   - [ ] Decide: keep CSS 3D, or schedule the Three.js test earlier

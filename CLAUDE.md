@@ -52,5 +52,6 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 - The stand's column and the bookcase frames are photographs. After changing `ionic.js`, `stand3d.js`, `texture.js`, `bookcase.js` or the bookcase CSS, run `npm run build:prototype && npm run render:static && npm run build:prototype` (needs Playwright; see the header of `renderStatic.mjs`). `standAsset.js`, `caseAsset.js` and `assets/*.webp` are generated and committed.
 - Spines are drawn once on a canvas and cached in the browser (`spineLayout.js`, `spineCanvas.js`, `spineCache.js`). Bump `DESIGN_VERSION` in `spineLayout.js` when the spine design changes.
 - The book's pull-out and put-back use the Web Animations API (`stageMotion.js`); Framer Motion only drives the swipe track. Never animate `opacity` on the 3D book: it flattens it.
+- Photographed `<img>`s (`.case-frame`, `.stand-image`) need `max-width: none`; the Artifact page's `img { max-width: 100% }` otherwise shifts them off-centre.
 - How drawing and animation work, and the rules to keep: see `docs/RENDERING.md`.
 - Libraries (React, htm, Framer Motion) load from CDNs, so the page only renders where those hosts are reachable.
