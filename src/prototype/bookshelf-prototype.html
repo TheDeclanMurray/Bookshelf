@@ -20,6 +20,8 @@
   --font-hand: 'IM Fell English', Georgia, serif;
   /* wood grain: horizontal streaks from SVG turbulence, drawn as a data URI so no request is made */
   --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.55' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.3 0 0 0 -0.42'/></filter><rect width='100%' height='100%' filter='url(%23g)' opacity='0.55'/></svg>");
+  /* marble veins: dark filaments from SVG turbulence, tiled, used by the 3D stand */
+  --vein: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='v' x='0' y='0' width='100%' height='100%'><feTurbulence type='turbulence' baseFrequency='0.007 0.017' numOctaves='3' seed='12' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.3  0 0 0 0 0.33  0 0 0 0 0.4  1 0 0 0 0'/><feComponentTransfer><feFuncA type='table' tableValues='0.8 0.28 0 0 0 0 0'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23v)'/></svg>");
   /* leather / cloth speckle for spines */
   --cloth: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0 0 0 -0.25'/></filter><rect width='100%' height='100%' filter='url(%23c)' opacity='0.5'/></svg>");
 }
@@ -129,11 +131,16 @@ button { font: inherit; color: inherit; }
 .reading { width: 360px; height: 700px; position: relative; }
 .reading-label { position: absolute; top: 14px; left: 0; right: 0; text-align: center; font: 600 11px var(--font-display); letter-spacing: 0.32em; text-transform: uppercase; color: var(--brass); }
 .reading-label::after { content: ""; display: block; margin: 8px auto 0; width: 120px; height: 1px; background: linear-gradient(90deg, transparent, var(--brass-dim), transparent); }
-.scene { position: absolute; left: 0; top: 74px; width: 360px; height: 470px; perspective: 900px; }
-.scene svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.reading-book { position: absolute; padding: 0; border: 0; background: none; cursor: pointer; transform-style: preserve-3d; }
-.reading-book.is-out { visibility: hidden; }
-.reading-book .tap-ring { position: absolute; inset: -6px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out infinite; pointer-events: none; }
+.scene { position: absolute; left: 0; top: 74px; width: 360px; height: 470px; perspective: 1100px; perspective-origin: 50% 38%; }
+.stand-glow { position: absolute; left: -40px; top: 10px; width: 440px; height: 440px; border-radius: 50%; background: radial-gradient(circle, rgba(233,164,92,.26), rgba(233,164,92,0) 68%); }
+.stand-anchor { position: absolute; left: 180px; width: 0; height: 0; transform-style: preserve-3d; }
+.stand3d { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
+.f3 { position: absolute; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.f3-edge { box-shadow: inset 0 0 0 0.6px rgba(40, 44, 56, .35); }
+.floor-shadow { position: absolute; left: -170px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65), rgba(0,0,0,0) 66%); }
+.rest-book { position: absolute; transform-style: preserve-3d; transform-origin: 50% 100%; transition: opacity 0.14s; }
+.rest-book.is-out { opacity: 0; pointer-events: none; }
+.rest-book .tap-ring { position: absolute; inset: 4px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out infinite; pointer-events: none; }
 @keyframes tapPulse { 0% { opacity: .0; transform: scale(.97); } 25% { opacity: .75; } 100% { opacity: 0; transform: scale(1.07); } }
 .reading-info { position: absolute; left: 24px; right: 24px; top: 560px; text-align: center; }
 .reading-title { font: 700 21px/1.2 var(--font-display); color: #f3ead7; letter-spacing: 0.04em; text-wrap: balance; }
@@ -178,7 +185,7 @@ button { font: inherit; color: inherit; }
 .facts dt { font: 600 0.72em var(--font-display); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-soft); align-self: center; }
 .facts dd { margin: 0; }
 .status-chip { display: inline-block; padding: 0.05em 0.6em; border-radius: 1em; border: 1px solid currentColor; font: 600 0.72em var(--font-display); letter-spacing: 0.14em; text-transform: uppercase; }
-.status-chip.read { color: #2f6b45; } .status-chip.dnf { color: #8a3a2a; } .status-chip.tbr { color: #3d5a80; } .status-chip.reading { color: #8a5a14; }
+.status-chip.st-read { color: #2f6b45; } .status-chip.st-dnf { color: #8a3a2a; } .status-chip.st-tbr { color: #3d5a80; } .status-chip.st-reading { color: #8a5a14; }
 .series-dots { display: flex; gap: 0.3em; margin-top: 0.3em; flex-wrap: wrap; }
 .series-dots i { width: 0.7em; height: 0.7em; border-radius: 50%; border: 1px solid var(--ink-soft); }
 .series-dots i.have { background: var(--ink-soft); } .series-dots i.here { background: #b5802a; border-color: #7a4f12; }
@@ -1026,6 +1033,76 @@ function isRealTap(event) {
 }
 
 /**
+ * texture.js
+ * Draws the marble vein texture once, at startup, into a small bitmap and installs it as
+ * the `--vein` CSS variable. A bitmap is cheap to paint on all ~190 facets of the 3D stand;
+ * the same look made with an SVG filter had to be re-rendered and stalled the page.
+ * (styles.css keeps an SVG version as a fallback if a canvas is not available.)
+ */
+
+// ----------------------------------------------------------------- constants
+const VEIN_TEXTURE_PX = 256;                              // tile size; sine frequencies are whole numbers, so the tile repeats seamlessly
+const VEIN_RGB = [118, 124, 142];                         // cool grey filaments
+
+/**
+ * Smooth 0-1 ramp between two edges (either order).
+ * @param {number} edge0 - Value that maps to 0
+ * @param {number} edge1 - Value that maps to 1
+ * @param {number} x - Input
+ * @returns {number} 0 to 1
+ */
+function smoothStep(edge0, edge1, x) {
+  const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * Computes how strong a vein is at one point of the tile.
+ * @param {number} u - Horizontal position, 0 to 1
+ * @param {number} v - Vertical position, 0 to 1
+ * @returns {number} Opacity 0 to 1
+ */
+function veinStrength(u, v) {
+  const TAU = Math.PI * 2;
+  // A gentle warp bends the lines so they wander like real veins
+  const warp = 0.18 * Math.sin(TAU * (2 * u + 3 * v)) + 0.1 * Math.sin(TAU * (5 * u - 4 * v + 0.3)) + 0.05 * Math.sin(TAU * (9 * u + 7 * v));
+  const main = Math.abs(Math.sin(TAU * (u + 2 * v + warp * 1.5)));          // near 0 along a vein
+  const branch = Math.abs(Math.sin(TAU * (3 * u - v + warp * 2.2 + 0.4)));
+  return Math.min(0.6, smoothStep(0.11, 0, main) * 0.5 + smoothStep(0.06, 0, branch) * 0.32);
+}
+
+/**
+ * Renders the vein tile.
+ * @returns {string} PNG data URL
+ */
+function buildMarbleVeinDataUrl() {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = VEIN_TEXTURE_PX;
+  const context = canvas.getContext('2d');
+  const image = context.createImageData(VEIN_TEXTURE_PX, VEIN_TEXTURE_PX);
+  for (let y = 0; y < VEIN_TEXTURE_PX; y++) {
+    for (let x = 0; x < VEIN_TEXTURE_PX; x++) {
+      const at = (y * VEIN_TEXTURE_PX + x) * 4;
+      image.data[at] = VEIN_RGB[0];
+      image.data[at + 1] = VEIN_RGB[1];
+      image.data[at + 2] = VEIN_RGB[2];
+      image.data[at + 3] = Math.round(veinStrength(x / VEIN_TEXTURE_PX, y / VEIN_TEXTURE_PX) * 255);
+    }
+  }
+  context.putImageData(image, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+/** Installs the bitmap as --vein; on any failure the CSS fallback stays in place. */
+function installMarbleTexture() {
+  try {
+    document.documentElement.style.setProperty('--vein', `url(${buildMarbleVeinDataUrl()})`);
+  } catch (error) { /* no canvas available: keep the SVG fallback from styles.css */ }
+}
+
+installMarbleTexture();
+
+/**
  * art.js
  * Drawn artwork for the prototype: generated covers and generated spines.
  * Real covers cannot be fetched inside the prototype, so each cover is a small
@@ -1277,158 +1354,6 @@ function Bookcase({ room, pickedId, onPick, onCycleSort }) {
 }
 
 /**
- * readingRoom.js
- * The start screen: the book you are reading, resting on an intricately carved
- * marble lectern with a brass ledge. The stand is drawn in SVG (marble veining
- * comes from an SVG noise filter); the book is a real element so tapping it can
- * lift it onto the stage.
- */
-
-// ----------------------------------------------------------------- constants
-const READING_COVER_W = 150;                              // cover size on the stand, in frame px
-const READING_COVER_H = 225;
-const STAND_TILT_DEG = 9;                                 // how far the book leans back on the lectern
-const READING_COVER_TOP = 33;                             // where the cover sits inside the scene
-const CARVE = 'rgba(64, 68, 80, 0.62)';                   // carved grooves
-const HIGHLIGHT = 'rgba(255, 255, 255, 0.8)';             // light catching a carved edge
-const FLUTE_XS = [168, 172.5, 177, 181.5, 186, 190.5, 195];   // column flute positions
-const EGG_XS = Array.from({ length: 7 }, (_, i) => 149 + i * 10.3);   // egg-and-dart molding under the capital
-const STAND_DENTIL_XS = Array.from({ length: 21 }, (_, i) => 70 + i * 11.2); // small blocks under the slab
-const BEAD_XS = Array.from({ length: 31 }, (_, i) => 62 + i * 8.2);   // row of beads along the slab's edge
-
-/**
- * An Ionic scroll (volute) made of nested arcs.
- * @param {{cx: number, cy: number, flip: boolean}} props - Center, and whether to mirror it
- * @returns {React.ReactElement} SVG group
- */
-function Volute({ cx, cy, flip }) {
-  const dir = flip ? -1 : 1;
-  const sweep = flip ? 0 : 1;                             // arcs turn the other way when mirrored
-  return html`<g fill="none" stroke=${CARVE} strokeWidth="1.1">
-    <circle cx=${cx} cy=${cy} r="11" fill="url(#marbleFace)" stroke=${CARVE} />
-    <path d=${`M ${cx + 9 * dir} ${cy - 2} a 9 9 0 1 ${sweep} ${-9 * dir} -7 a 6 6 0 1 ${sweep} ${6 * dir} 6 a 3.2 3.2 0 1 ${sweep} ${-3 * dir} -3`} />
-    <circle cx=${cx} cy=${cy} r="1.6" fill="#d9b865" stroke="none" />
-    <circle cx=${cx} cy=${cy} r="11" stroke=${HIGHLIGHT} strokeWidth="0.6" transform=${`translate(-0.6 -0.6)`} opacity="0.7" />
-  </g>`;
-}
-
-/**
- * The marble lectern drawn behind the book: stepped plinth, fluted baluster column,
- * Ionic capital, carved relief panel, and a brass ledge for the book to rest on.
- * @returns {React.ReactElement} SVG scene
- */
-function MarbleStand() {
-  return html`<svg viewBox="0 0 360 470" aria-hidden="true">
-    <defs>
-      <linearGradient id="marbleFace" x1="0" x2="1"><stop offset="0" stopColor="#b8bcc4" /><stop offset="0.2" stopColor="#ebe9e5" /><stop offset="0.5" stopColor="#f8f6f2" /><stop offset="0.82" stopColor="#dcdad6" /><stop offset="1" stopColor="#a4a8b0" /></linearGradient>
-      <linearGradient id="marbleTop" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#d6d4cf" /><stop offset="1" stopColor="#fbf9f5" /></linearGradient>
-      <linearGradient id="marbleShade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f5f3ef" /><stop offset="1" stopColor="#bdc0c7" /></linearGradient>
-      <radialGradient id="marbleBall" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stopColor="#ffffff" /><stop offset="1" stopColor="#aeb2ba" /></radialGradient>
-      <linearGradient id="standBrass" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f1da9a" /><stop offset="0.5" stopColor="#b08a38" /><stop offset="1" stopColor="#e1c576" /></linearGradient>
-      <radialGradient id="standGlow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#e9a45c" stopOpacity="0.26" /><stop offset="1" stopColor="#e9a45c" stopOpacity="0" /></radialGradient>
-      <filter id="marbleVeins" x="-5%" y="-5%" width="110%" height="110%">
-        <feTurbulence type="turbulence" baseFrequency="0.011 0.03" numOctaves="4" seed="12" result="noise" />
-        <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0.36  0 0 0 0 0.39  0 0 0 0 0.44  1 0 0 0 0" result="tinted" />
-        <feComponentTransfer in="tinted" result="veinAlpha"><feFuncA type="table" tableValues="0.85 0.3 0 0 0 0 0" /></feComponentTransfer>
-        <feComposite in="veinAlpha" in2="SourceAlpha" operator="in" result="veins" />
-        <feMerge><feMergeNode in="SourceGraphic" /><feMergeNode in="veins" /></feMerge>
-      </filter>
-    </defs>
-    <ellipse cx="180" cy="190" rx="200" ry="200" fill="url(#standGlow)" />
-    <ellipse cx="180" cy="466" rx="140" ry="11" fill="rgba(0,0,0,.6)" />
-
-    <g filter="url(#marbleVeins)">
-      <rect x="88" y="452" width="184" height="13" rx="3" fill="url(#marbleFace)" />
-      <rect x="106" y="442" width="148" height="11" rx="3" fill="url(#marbleFace)" />
-      <rect x="124" y="430" width="112" height="13" rx="2" fill="url(#marbleFace)" />
-      <ellipse cx="180" cy="427" rx="42" ry="8" fill="url(#marbleFace)" /><ellipse cx="180" cy="416" rx="35" ry="7" fill="url(#marbleFace)" />
-      <path d="M 160 414 C 163 394 164 366 166 334 L 194 334 C 196 366 197 394 200 414 Z" fill="url(#marbleFace)" />
-    </g>
-    <g fill="none" stroke=${CARVE} strokeWidth="0.9">
-      <path d="M 88 452 H 272 M 106 442 H 254 M 124 430 H 236" stroke=${HIGHLIGHT} strokeWidth="1" />
-      <ellipse cx="180" cy="427" rx="42" ry="8" /><ellipse cx="180" cy="416" rx="35" ry="7" />
-      ${FLUTE_XS.map((x) => html`<path key=${x} d=${`M ${x} 340 C ${x + (x - 180) * 0.04} 372 ${x + (x - 180) * 0.1} 398 ${x + (x - 180) * 0.2} 411`} />`)}
-      <path d="M 160 412 C 172 418 188 418 200 412" /><path d="M 165 340 C 175 344 185 344 195 340" />
-      <ellipse cx="180" cy="352" rx="15.2" ry="2.6" /><ellipse cx="180" cy="376" rx="16.6" ry="2.7" /><ellipse cx="180" cy="398" rx="18.4" ry="2.8" />
-    </g>
-
-    <g transform="translate(0 -34)">
-      <g filter="url(#marbleVeins)">
-        <rect x="146" y="355" width="68" height="13" rx="4" fill="url(#marbleFace)" />
-        <rect x="120" y="344" width="120" height="12" rx="2" fill="url(#marbleFace)" />
-        <circle cx="130" cy="364" r="11" fill="url(#marbleFace)" /><circle cx="230" cy="364" r="11" fill="url(#marbleFace)" />
-        <rect x="158" y="330" width="44" height="15" rx="2" fill="url(#marbleFace)" />
-        <path d="M 58 318 H 302 C 296 326 270 328 250 330 H 110 C 90 328 64 326 58 318 Z" fill="url(#marbleShade)" />
-        <rect x="50" y="300" width="260" height="19" rx="2" fill="url(#marbleFace)" />
-        <polygon points="50,300 310,300 286,254 74,254" fill="url(#marbleTop)" />
-        <circle cx="56" cy="296" r="8" fill="url(#marbleBall)" /><circle cx="304" cy="296" r="8" fill="url(#marbleBall)" />
-      </g>
-      <g fill="none" stroke=${CARVE} strokeWidth="0.9">
-        <rect x="146" y="355" width="68" height="13" rx="4" />
-        <rect x="120" y="344" width="120" height="12" rx="2" /><path d="M 124 347 H 236" stroke=${HIGHLIGHT} />
-        ${EGG_XS.map((x) => html`<g key=${x}><ellipse cx=${x} cy="361" rx="3.5" ry="4.6" /><path d=${`M ${x - 5} 366 L ${x} 363 L ${x + 5} 366`} /></g>`)}
-        <rect x="158" y="330" width="44" height="15" rx="2" /><path d="M 162 335 H 198 M 162 340 H 198" />
-        <path d="M 58 318 H 302 C 296 326 270 328 250 330 H 110 C 90 328 64 326 58 318 Z" />
-        ${STAND_DENTIL_XS.map((x) => html`<rect key=${x} x=${x} y="321" width="5.5" height="4.6" fill=${CARVE} stroke="none" />`)}
-        <rect x="50" y="300" width="260" height="19" rx="2" />
-        <polygon points="50,300 310,300 286,254 74,254" /><path d="M 60 296 L 82 258 M 300 296 L 278 258" opacity="0.4" />
-      </g>
-      <${Volute} cx=${130} cy=${364} flip=${false} /><${Volute} cx=${230} cy=${364} flip=${true} />
-
-      <rect x="60" y="304" width="240" height="11" rx="2" fill="none" stroke=${CARVE} strokeWidth="0.9" />
-      <g fill="none" stroke=${CARVE} strokeWidth="1.1" strokeLinecap="round">
-        <path d="M 70 309.5 C 80 303 92 303 100 309 S 118 316 128 309.5 S 140 304 152 309" /><path d="M 290 309.5 C 280 303 268 303 260 309 S 242 316 232 309.5 S 220 304 208 309" />
-        <circle cx="70" cy="309.5" r="2.2" /><circle cx="290" cy="309.5" r="2.2" />
-        <ellipse cx="88" cy="305.4" rx="3.2" ry="1.6" transform="rotate(-20 88 305.4)" /><ellipse cx="116" cy="313.6" rx="3.2" ry="1.6" transform="rotate(20 116 313.6)" />
-        <ellipse cx="272" cy="305.4" rx="3.2" ry="1.6" transform="rotate(20 272 305.4)" /><ellipse cx="244" cy="313.6" rx="3.2" ry="1.6" transform="rotate(-20 244 313.6)" />
-      </g>
-      <g stroke=${CARVE} strokeWidth="0.8" fill="rgba(255,255,255,.35)">
-        ${[0, 45, 90, 135].map((a) => html`<ellipse key=${a} cx="180" cy="309.5" rx="7" ry="2.6" transform=${`rotate(${a} 180 309.5)`} />`)}
-        <circle cx="180" cy="309.5" r="2.4" fill="#d9b865" />
-      </g>
-      <g fill=${HIGHLIGHT}>${BEAD_XS.map((x) => html`<circle key=${x} cx=${x} cy="301.6" r="1.35" />`)}</g>
-
-      <rect x="88" y="290" width="184" height="9" rx="2" fill="url(#standBrass)" stroke="rgba(0,0,0,.4)" />
-      <ellipse cx="56" cy="296" rx="8.6" ry="2.2" fill="none" stroke="url(#standBrass)" strokeWidth="1.8" /><ellipse cx="304" cy="296" rx="8.6" ry="2.2" fill="none" stroke="url(#standBrass)" strokeWidth="1.8" />
-    </g>
-  </svg>`;
-}
-
-/**
- * The reading screen.
- * @param {{room: Object, pickedId: (string|null), onPickReading: function, today: string}} props
- *   room.book is the current book or null; onPickReading(book, element) opens the book;
- *   today is YYYY-MM-DD for the day count
- * @returns {React.ReactElement} Reading room element
- */
-function ReadingRoom({ room, pickedId, onPickReading, today }) {
-  const book = room.book;
-  const days = book && book.startedAt ? SL.daysBetween(book.startedAt, today) : 0;
-  const handleClick = (event) => {
-    if (!isRealTap(event)) return;                         // ignore the touch that ends a swipe
-    onPickReading(book, event.currentTarget);
-  };
-  return html`<div className="reading case" data-theme="mahogany">
-    <div className="reading-label">Currently Reading</div>
-    <div className="scene">
-      <${MarbleStand} />
-      ${book && html`<button className=${'reading-book' + (pickedId === book.id ? ' is-out' : '')}
-        aria-label=${`Open ${book.title}`} onPointerDown=${noteTapStart} onClick=${handleClick}
-        style=${{ left: (360 - READING_COVER_W) / 2, top: READING_COVER_TOP, width: READING_COVER_W, height: READING_COVER_H,
-          transformOrigin: '50% 100%', transform: `rotateX(${STAND_TILT_DEG}deg)`, boxShadow: '0 10px 22px rgba(0,0,0,.6)' }}>
-        <${CoverArt} book=${book} width=${READING_COVER_W} height=${READING_COVER_H} />
-        <div className="cover-sheen" /><div className="cover-crease" /><span className="tap-ring" />
-      </button>`}
-    </div>
-    ${book ? html`<div className="reading-info">
-      <div className="reading-title">${book.title}</div>
-      <div className="reading-author">${book.author}</div>
-      <div className="reading-meta">Day ${days + 1} · started ${SL.formatShortDate(book.startedAt)}${book.series ? ' · ' + SL.seriesLabel(book) : ''}</div>
-    </div>` : html`<div className="reading-empty">The stand is empty. Pull something from your To Be Read shelf.</div>`}
-  </div>`;
-}
-
-/**
  * bookPages.js
  * What is printed inside the open book: the summary on the left page and your
  * own reading record on the right page.
@@ -1476,7 +1401,7 @@ function StatsPage({ book, allBooks, today }) {
       ? html`<div className="stars" aria-label=${`${book.rating} out of ${STAR_COUNT} stars`}>${Array.from({ length: STAR_COUNT }, (_, i) =>
         html`<span key=${i} className=${'star' + (i < book.rating ? ' on' : '')}>★</span>`)}</div>`
       : html`<div className="pg-author">Not rated yet</div>`}
-    <div><span className=${'status-chip ' + book.status}>${STATUS_LABELS[book.status]}</span></div>
+    <div><span className=${'status-chip st-' + book.status}>${STATUS_LABELS[book.status]}</span></div>
     <dl className="facts">
       ${book.startedAt && html`<${React.Fragment}><dt>Started</dt><dd>${SL.formatShortDate(book.startedAt)}</dd><//>`}
       ${book.finishedAt && html`<${React.Fragment}><dt>Finished</dt><dd>${SL.formatShortDate(book.finishedAt)}</dd><dt>Took</dt><dd>${readDays} ${readDays === 1 ? 'day' : 'days'}</dd><//>`}
@@ -1490,6 +1415,273 @@ function StatsPage({ book, allBooks, today }) {
     ${book.notes && html`<p className="pg-note">${book.notes}</p>`}
     <div className="pg-num">iii</div>
   </div></div>`;
+}
+
+/**
+ * book3d.js
+ * A book as a CSS 3D box: back cover, spine, page edges, and a front cover that swings
+ * open on its spine side. Used by the stage (big, opens to pages) and by the reading
+ * stand (small, closed). The parent supplies the sizing element and `preserve-3d`.
+ */
+
+// ----------------------------------------------------------------- constants
+const OPEN_ANGLE_DEG = -180;                              // how far the front cover swings
+const COVER_SPRING = { type: 'spring', stiffness: 200, damping: 24, mass: 0.9 };
+const COVER_CLOSE = { duration: 0.2, ease: [0.4, 0, 0.2, 1] };   // closing is quick so the book can move straight after
+const PAGE_FONT_RATIO = 0.068;                            // page text size as a fraction of the book width
+
+/**
+ * The faces of one book.
+ * @param {{book: Object, allBooks: Object[], today: string, W: number, H: number, D: number,
+ *   coverOpen: boolean, closing: boolean, onCoverClick: function, onCoverSettled: function,
+ *   withPages: boolean, coverExtras: *}} props
+ *   W, H, D are width, height and thickness in px; spineUnit is px per spine design unit (omit to derive from H); withPages draws the printed pages
+ *   (the stand does not need them); coverExtras is drawn on the front cover (e.g. a tap hint)
+ * @returns {React.ReactElement} Fragment of positioned faces
+ */
+function BookBox({ book, allBooks, today, W, H, D, spineUnit, coverOpen, closing, onCoverClick, onCoverSettled, withPages, coverExtras }) {
+  const faceBox = { left: 0, top: 0, width: W, height: H };
+  const pageFontSize = W * PAGE_FONT_RATIO;               // page text scales with the book
+  return html`<${React.Fragment}>
+    <div className="face page-edge" style=${{ ...faceBox, transform: `translateZ(${-D / 2}px) rotateY(180deg)`, background: '#2a1a10' }}>
+      <${CoverArt} book=${book} width=${W} height=${H} /></div>
+    <div className="face" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${-W / 2}px) rotateY(-90deg)` }}>
+      <${SpineArt} book=${book} width=${D} height=${H} unit=${spineUnit || H / SL.SPINE_BASE_HEIGHT_PX} /></div>
+    <div className="face page-edge" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${W / 2}px) rotateY(90deg)` }} />
+    <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${-H / 2}px) rotateX(90deg)` }} />
+    <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${H / 2}px) rotateX(-90deg)` }} />
+    ${withPages && html`<div className="face" style=${{ ...faceBox, transform: `translateZ(${D / 2 - 1}px)`, fontSize: pageFontSize }}>
+      <${StatsPage} book=${book} allBooks=${allBooks} today=${today} /></div>`}
+    <div style=${{ ...faceBox, position: 'absolute', transformStyle: 'preserve-3d', transform: `translateZ(${D / 2}px)` }}>
+      <${motion.div} style=${{ position: 'absolute', inset: 0, transformOrigin: '0% 50%', transformStyle: 'preserve-3d' }}
+        animate=${{ rotateY: coverOpen ? OPEN_ANGLE_DEG : 0 }} transition=${closing ? COVER_CLOSE : COVER_SPRING} onAnimationComplete=${onCoverSettled}>
+        <div className="face cover-face" style=${faceBox} onClick=${onCoverClick} onPointerDown=${noteTapStart}>
+          <${CoverArt} book=${book} width=${W} height=${H} /><div className="cover-sheen" /><div className="cover-crease" />${coverExtras}</div>
+        ${withPages && html`<div className="face" style=${{ ...faceBox, transform: 'rotateY(180deg)', fontSize: pageFontSize }}><${SummaryPage} book=${book} /></div>`}
+      <//>
+    </div>
+  <//>`;
+}
+
+/**
+ * stand3d.js
+ * The reading stand as real 3D geometry (CSS 3D, no flat drawing): the top of a Roman
+ * column on a thick stepped base, with the book resting on a marble wedge. Round parts
+ * are rings of flat facets (20 around, 16 for the fluted shaft); each facet is lit from
+ * a fixed light direction, so the shading changes smoothly around the column.
+ * Everything is positioned relative to the center of the abacus' top surface, with y
+ * pointing down (negative y is above the abacus).
+ */
+
+// ----------------------------------------------------------------- constants
+const LIGHT_DIR = (() => { const v = [-0.55, -0.65, 0.55]; const len = Math.hypot(...v); return v.map((c) => c / len); })();   // from upper left, toward the viewer
+const AMBIENT_LIGHT = 0.28;                               // shade of a face turned fully away from the light
+const MARBLE_LIGHT = [247, 244, 238];                     // marble in full light
+const MARBLE_SHADOW = [104, 110, 128];                    // marble in shade (cool grey-blue)
+const BRASS_LIGHT = [246, 222, 150];
+const BRASS_SHADOW = [96, 68, 22];
+const ROUND_FACETS = 20;                                  // facets around a smooth round part
+const SHAFT_FACETS = 16;                                  // flutes around the column shaft
+const VEIN_TILE_PX = 256;                                 // size of the repeating vein texture (drawn in texture.js)
+const STAND_TILT_X_DEG = -17;                             // the camera looks down on the stand
+const STAND_TURN_Y_DEG = 16;                              // and sees it from slightly to the left, so the book's spine shows
+const STAND_SCALE = 0.88;
+const BOOK_REST_Z = 62;                                   // front edge of the wedge, where the book's bottom edge sits
+const BOOK_REST_DEG = 55;                                 // book leans back this far from vertical (35 degrees above flat)
+const WEDGE_W = 132;
+const WEDGE_DEPTH = 124;
+const WEDGE_BACK_H = 86;
+const FLOOR_Y = 234;                                      // bottom of the base, in stand coordinates
+
+/**
+ * How brightly a surface with the given outward normal is lit.
+ * @param {number[]} normal - Unit vector [x, y, z]; y is negative for upward-facing
+ * @returns {number} AMBIENT_LIGHT up to 1
+ */
+function lightAmount(normal) {
+  const facing = normal[0] * LIGHT_DIR[0] + normal[1] * LIGHT_DIR[1] + normal[2] * LIGHT_DIR[2];   // dot product
+  return AMBIENT_LIGHT + (1 - AMBIENT_LIGHT) * Math.max(0, facing);
+}
+
+/**
+ * CSS color for a lit surface.
+ * @param {string} tint - 'marble' or 'brass'
+ * @param {number} amount - 0 (shade) to 1 (full light)
+ * @returns {string} rgb() color
+ */
+function surfaceColor(tint, amount) {
+  const [dark, light] = tint === 'brass' ? [BRASS_SHADOW, BRASS_LIGHT] : [MARBLE_SHADOW, MARBLE_LIGHT];
+  const mixed = dark.map((channel, i) => Math.round(channel + (light[i] - channel) * amount));
+  return `rgb(${mixed[0]}, ${mixed[1]}, ${mixed[2]})`;
+}
+
+/**
+ * Background for a flat face: base color plus marble veins offset per face so veins do not repeat.
+ * @param {string} tint - 'marble' or 'brass'
+ * @param {number} amount - Light on this face, 0 to 1
+ * @param {number} seed - Different per face, shifts the vein texture
+ * @param {number} y - Face height, continues veins from face to face
+ * @returns {Object} Style properties
+ */
+function flatPaint(tint, amount, seed, y) {
+  const color = surfaceColor(tint, amount);
+  if (tint === 'brass') return { backgroundColor: color, backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,.28), rgba(0,0,0,.2))' };
+  return { backgroundColor: color, backgroundImage: 'var(--vein)', backgroundSize: `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px`, backgroundPosition: `${-seed * 37}px ${-y}px` };
+}
+
+/**
+ * A rectangular block (four sides and a top).
+ * @param {{w: number, h: number, d: number, y: number, tint?: string, z?: number}} props - Size, top height, tint and z offset of its center
+ * @returns {React.ReactElement} Faces
+ */
+function Box3D({ w, h, d, y, tint = 'marble', z = 0 }) {
+  const faces = [
+    { id: 'front', fw: w, fh: h, top: y, t: `translateZ(${d / 2 + z}px)`, n: [0, 0, 1] },
+    { id: 'right', fw: d, fh: h, top: y, t: `translateZ(${z}px) rotateY(90deg) translateZ(${w / 2}px)`, n: [1, 0, 0] },
+    { id: 'left', fw: d, fh: h, top: y, t: `translateZ(${z}px) rotateY(-90deg) translateZ(${w / 2}px)`, n: [-1, 0, 0] },
+    { id: 'top', fw: w, fh: d, top: y - d / 2, t: `translateZ(${z}px) rotateX(90deg)`, n: [0, -1, 0] },
+  ];
+  return html`<${React.Fragment}>${faces.map((f, i) => html`<div key=${f.id} className="f3 f3-edge" style=${{ left: -f.fw / 2, top: f.top, width: f.fw, height: f.fh,
+    transform: f.t, ...flatPaint(tint, lightAmount(f.n), i + h, y) }} />`)}<//>`;
+}
+
+/**
+ * A round part (cylinder or cone frustum) built from flat facets.
+ * @param {{rTop: number, rBottom: number, h: number, y: number, facets?: number, fluted?: boolean, tint?: string}} props
+ *   radii at the top and bottom, height, y of the top, facet count, flutes, tint
+ * @returns {React.ReactElement} Facets
+ */
+function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false, tint = 'marble', veins: withVeins = true }) {
+  const half = Math.PI / facets;
+  const slant = Math.hypot(h, rBottom - rTop);
+  const tilt = Math.atan2(rBottom - rTop, h);             // positive when the part is narrower at the top
+  const wTop = 2 * rTop * Math.sin(half);
+  const wBottom = 2 * rBottom * Math.sin(half);
+  const wMax = Math.max(wTop, wBottom);
+  const apothem = ((rTop + rBottom) / 2) * Math.cos(half);   // distance from the axis to the middle of a facet
+  const topInset = (wMax - wTop) / 2;
+  const bottomInset = (wMax - wBottom) / 2;
+  const clip = `polygon(${topInset}px 0, calc(100% - ${topInset}px) 0, calc(100% - ${bottomInset}px) 100%, ${bottomInset}px 100%)`;
+  const lightAt = (degrees) => {
+    const a = (degrees * Math.PI) / 180;
+    return lightAmount([Math.sin(a) * Math.cos(tilt), -Math.sin(tilt), Math.cos(a) * Math.cos(tilt)]);
+  };
+  return html`<${React.Fragment}>${Array.from({ length: facets }, (_, i) => {
+    const theta = (i * 360) / facets;                      // 0 faces the viewer; positive turns toward +x
+    const left = lightAt(theta - 180 / facets);            // light at this facet's left and right edges
+    const right = lightAt(theta + 180 / facets);
+    const mid = lightAt(theta);
+    const colorOf = (amount) => surfaceColor(tint, amount);
+    const gradient = fluted
+      ? `linear-gradient(90deg, ${colorOf(left * 0.62)} 0%, ${colorOf(mid * 1.02)} 30%, ${colorOf(mid)} 62%, ${colorOf(right * 0.7)} 100%)`   // each flute is a shallow groove
+      : `linear-gradient(90deg, ${colorOf(left)}, ${colorOf(right)})`;
+    const veins = tint === 'brass' || !withVeins ? '' : 'var(--vein), ';   // small rings skip the texture: it is invisible at that size and costs paint time
+    const layered = veins !== '';
+    return html`<div key=${i} className="f3" style=${{ left: -wMax / 2, top: y + h / 2 - slant / 2, width: wMax, height: slant,
+      transform: `rotateY(${theta}deg) translateZ(${apothem}px) rotateX(${(tilt * 180) / Math.PI}deg)`, clipPath: clip, WebkitClipPath: clip,
+      backgroundImage: veins + gradient, backgroundSize: layered ? `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px, 100% 100%` : '100% 100%', backgroundRepeat: layered ? 'repeat, no-repeat' : 'no-repeat',
+      backgroundPosition: layered ? `${-i * 41}px ${-y}px, 0 0` : '0 0' }} />`;
+  })}<//>`;
+}
+
+/**
+ * A flat round surface facing up (the top of a ring you can see from above).
+ * @param {{r: number, y: number, tint?: string}} props - Radius, height, tint
+ * @returns {React.ReactElement} Disc
+ */
+function Disc3D({ r, y, tint = 'marble' }) {
+  return html`<div className="f3" style=${{ left: -r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', transform: 'rotateX(90deg)',
+    ...flatPaint(tint, lightAmount([0, -1, 0]), 7, y) }} />`;
+}
+
+/**
+ * A wedge (triangular block) that slopes up toward the back, holding the book at a reading angle.
+ * @returns {React.ReactElement} Faces
+ */
+function Wedge3D() {
+  const slopeLen = Math.hypot(WEDGE_DEPTH, WEDGE_BACK_H);
+  const zBack = BOOK_REST_Z - WEDGE_DEPTH;                // z of the wedge's back wall
+  const zMid = (BOOK_REST_Z + zBack) / 2;
+  const sideTop = -WEDGE_BACK_H;
+  const slopeNormal = [0, -Math.cos(Math.atan2(WEDGE_BACK_H, WEDGE_DEPTH)), Math.sin(Math.atan2(WEDGE_BACK_H, WEDGE_DEPTH))];
+  const sideClip = { right: 'polygon(0 100%, 100% 100%, 100% 0)', left: 'polygon(0 0, 0 100%, 100% 100%)' };
+  const side = (key, rotation, normal) => html`<div key=${key} className="f3 f3-edge" style=${{ left: -WEDGE_DEPTH / 2, top: sideTop, width: WEDGE_DEPTH, height: WEDGE_BACK_H,
+    transform: `translateZ(${zMid}px) rotateY(${rotation}deg) translateZ(${WEDGE_W / 2}px)`, clipPath: sideClip[key], WebkitClipPath: sideClip[key], ...flatPaint('marble', lightAmount(normal), 3, 0) }} />`;
+  return html`<${React.Fragment}>
+    <div className="f3 f3-edge" style=${{ left: -WEDGE_W / 2, top: sideTop, width: WEDGE_W, height: WEDGE_BACK_H, transform: `translateZ(${zBack}px) rotateY(180deg)`, ...flatPaint('marble', AMBIENT_LIGHT, 5, 0) }} />
+    <div className="f3 f3-edge" style=${{ left: -WEDGE_W / 2, top: -WEDGE_BACK_H / 2 - slopeLen / 2, width: WEDGE_W, height: slopeLen,
+      transform: `translateZ(${zMid}px) rotateX(${BOOK_REST_DEG}deg)`, ...flatPaint('marble', lightAmount(slopeNormal), 9, 0) }} />
+    ${side('right', 90, [1, 0, 0])}${side('left', -90, [-1, 0, 0])}
+  <//>`;
+}
+
+/**
+ * The whole stand with the book resting on it. The book is a real 3D book so tapping it
+ * can hand over to the stage with the same shape.
+ * @param {{book: (Object|null), W: number, H: number, D: number, hidden: boolean, onBookClick: function}} props
+ *   W, H, D are the book's width, height and thickness; hidden hides the book while it is on the stage
+ * @returns {React.ReactElement} Stand scene content (position it inside a perspective container)
+ */
+function MarbleStand({ book, W, H, D, hidden, onBookClick }) {
+  return html`<div className="stand3d" style=${{ transform: `rotateX(${STAND_TILT_X_DEG}deg) rotateY(${STAND_TURN_Y_DEG}deg) scale(${STAND_SCALE})` }}>
+    <div className="floor-shadow" style=${{ top: FLOOR_Y - 170, transform: 'rotateX(90deg)' }} />
+    <${Box3D} w=${196} h=${16} d=${196} y=${218} /><${Box3D} w=${172} h=${34} d=${172} y=${184} />
+    <${Disc3D} r=${60} y=${176} /><${Frustum3D} rTop=${58} rBottom=${60} h=${8} y=${176} veins=${false} />
+    <${Disc3D} r=${54} y=${170} /><${Frustum3D} rTop=${52} rBottom=${56} h=${6} y=${170} veins=${false} />
+    <${Frustum3D} rTop=${42} rBottom=${49} h=${126} y=${44} facets=${SHAFT_FACETS} fluted=${true} />
+    <${Frustum3D} rTop=${47} rBottom=${47} h=${3} y=${41} tint="brass" /><${Frustum3D} rTop=${45} rBottom=${45} h=${3} y=${38} tint="brass" />
+    <${Frustum3D} rTop=${62} rBottom=${46} h=${22} y=${16} veins=${false} />
+    <${Box3D} w=${146} h=${6} d=${146} y=${10} /><${Box3D} w=${158} h=${10} d=${158} y=${0} />
+    <${Wedge3D} />
+    <${Box3D} w=${W + 14} h=${5} d=${6} y=${-5} z=${BOOK_REST_Z - 3} tint="brass" />
+    ${book && html`<div className=${'rest-book' + (hidden ? ' is-out' : '')} style=${{ left: -W / 2, top: -H, width: W, height: H,
+      transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
+      <${BookBox} book=${book} W=${W} H=${H} D=${D} coverOpen=${false} closing=${false} withPages=${false}
+        onCoverClick=${onBookClick} coverExtras=${html`<span className="tap-ring" />`} />
+    </div>`}
+  </div>`;
+}
+
+/**
+ * readingRoom.js
+ * The start screen: the book you are reading, resting on a carved marble column capital
+ * (built in 3D in stand3d.js). Tapping the book lifts it onto the stage.
+ */
+
+// ----------------------------------------------------------------- constants
+const READING_BOOK_W = 112;                               // size of the book on the stand, in frame px
+const READING_BOOK_H = 168;
+const READING_BOOK_D = 26;                                // thickness on the stand (a typical novel)
+const STAND_TOP_Y = 218;                                  // where the abacus' top surface sits inside the scene
+
+/**
+ * The reading screen.
+ * @param {{room: Object, pickedId: (string|null), onPickReading: function, today: string}} props
+ *   room.book is the current book or null; onPickReading(book, element) opens the book;
+ *   today is YYYY-MM-DD for the day count
+ * @returns {React.ReactElement} Reading room element
+ */
+function ReadingRoom({ room, pickedId, onPickReading, today }) {
+  const book = room.book;
+  const days = book && book.startedAt ? SL.daysBetween(book.startedAt, today) : 0;
+  const handleClick = (event) => {
+    if (!isRealTap(event)) return;                         // ignore the touch that ends a swipe
+    onPickReading(book, event.currentTarget);
+  };
+  return html`<div className="reading case" data-theme="mahogany">
+    <div className="reading-label">Currently Reading</div>
+    <div className="scene">
+      <div className="stand-glow" />
+      <div className="stand-anchor" style=${{ top: STAND_TOP_Y }}>
+        <${MarbleStand} book=${book} W=${READING_BOOK_W} H=${READING_BOOK_H} D=${READING_BOOK_D} hidden=${!!book && pickedId === book.id} onBookClick=${handleClick} />
+      </div>
+    </div>
+    ${book ? html`<div className="reading-info">
+      <div className="reading-title">${book.title}</div>
+      <div className="reading-author">${book.author}</div>
+      <div className="reading-meta">Day ${days + 1} · started ${SL.formatShortDate(book.startedAt)}${book.series ? ' · ' + SL.seriesLabel(book) : ''}</div>
+    </div>` : html`<div className="reading-empty">The stand is empty. Pull something from your To Be Read shelf.</div>`}
+  </div>`;
 }
 
 /**
@@ -1509,27 +1701,26 @@ const BOOK_ASPECT = 1.5;                                  // book height / width
 const PULL_DEPTH_PX = 110;                                // how far the book swings toward you on the way out
 const DISPLAY_TILT_Y = 22;                                // turn that keeps a little spine visible beside the cover
 const DISPLAY_TILT_X = -4;
-const OPEN_ANGLE_DEG = -180;                              // front cover swing
-const DIM_FADE_S = 0.2;                                   // the rest of the screen fades while the book moves
-// One quick motion from the slot to the display pose; z arcs forward and back so it reads as pulling out
-const PULL_OUT = { type: 'spring', stiffness: 330, damping: 27, mass: 0.85, z: { duration: 0.34, times: [0, 0.4, 1], ease: 'easeOut' } };
-const PUT_BACK = { duration: 0.24, ease: [0.4, 0, 0.2, 1] };
+const DIM_FADE_S = 0.3;                                   // the rest of the screen fades while the book moves
+// One motion from the slot to the display pose; z arcs forward and back so it reads as pulling out
+const PULL_OUT = { type: 'spring', stiffness: 155, damping: 19.5, mass: 0.85, z: { duration: 0.44, times: [0, 0.4, 1], ease: 'easeOut' }, opacity: { duration: 0.14 } };
+const PUT_BACK = { duration: 0.24, ease: [0.4, 0, 0.2, 1], opacity: { duration: 0.24, ease: 'easeIn' } };
 const OPEN_SPRING = { type: 'spring', stiffness: 240, damping: 25, mass: 0.9 };
-const COVER_SPRING = { type: 'spring', stiffness: 200, damping: 24, mass: 0.9 };
 
 /**
  * Builds the position, scale and turn for each stage of the animation.
  * @param {Object} geo - {launch, W, H, anchorX, anchorY, scale0, openScale, displayScale}
- * @returns {Object} Framer Motion variants: launch (in the slot), display (cover showing), open (spread)
+ * @returns {Object} Framer Motion variants: launch (in the slot), display (cover showing), open (spread).
+ *          From a stand the book fades in and out, because the stand's perspective cannot be matched exactly.
  */
 function buildPoseVariants(geo) {
   const { launch, W, anchorX, anchorY, scale0, openScale, displayScale } = geo;
   const dx = launch.rect.cx - anchorX;                    // where the book starts, relative to the stage center
   const dy = launch.rect.cy - anchorY;
   return {
-    launch: { x: dx, y: dy, z: 0, scale: scale0, rotateX: launch.rotateX, rotateY: launch.rotateY, transition: PUT_BACK },
-    display: { x: 0, y: 0, z: [null, PULL_DEPTH_PX, 0], scale: displayScale, rotateX: DISPLAY_TILT_X, rotateY: DISPLAY_TILT_Y, transition: PULL_OUT },
-    open: { x: (openScale * W) / 2, y: 0, z: 0, scale: openScale, rotateX: 0, rotateY: 0, transition: OPEN_SPRING },
+    launch: { x: dx, y: dy, z: 0, opacity: launch.kind === 'shelf' ? 1 : 0, scale: scale0, rotateX: launch.rotateX, rotateY: launch.rotateY, transition: PUT_BACK },
+    display: { x: 0, y: 0, z: [null, PULL_DEPTH_PX, 0], opacity: 1, scale: displayScale, rotateX: DISPLAY_TILT_X, rotateY: DISPLAY_TILT_Y, transition: PULL_OUT },
+    open: { x: (openScale * W) / 2, y: 0, z: 0, opacity: 1, scale: openScale, rotateX: 0, rotateY: 0, transition: OPEN_SPRING },
   };
 }
 
@@ -1537,20 +1728,23 @@ function buildPoseVariants(geo) {
  * Full-screen stage that shows one book coming off the shelf and opening.
  * @param {{book: Object, allBooks: Object[], today: string, launch: Object, vp: {w: number, h: number}, onClose: function}} props
  *   launch describes where the book starts: {kind: 'shelf'|'stand', rect: {cx, cy, w, h}, thicknessPx, rotateX, rotateY};
- *   onClose runs once the book is back in place
+ *   onReturning runs when the put-back motion starts (the stand shows its book again); onClose runs once the book is back in place
  * @returns {React.ReactElement} Stage overlay
  */
-function BookStage({ book, allBooks, today, launch, vp, onClose }) {
+function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) {
   const isShelf = launch.kind === 'shelf';
   const [phase, setPhase] = useState('display');          // pose the book is animating toward; it starts at 'launch' and heads out immediately
   const [coverOpen, setCoverOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [dim, setDim] = useState(true);
   const closingRef = useRef(false);
+  const movedBackRef = useRef(false);
 
-  // Book size on the stage, depth from the real spine width, and the three display scales
+  // Book size on the stage, depth from the real spine width, and the display scales
   const W = SL.clamp((vp.w - 24) / 2, BOOK_MIN_W, BOOK_MAX_W);
   const H = Math.round(W * BOOK_ASPECT);
-  const scale0 = isShelf ? launch.rect.h / H : launch.rect.w / W;
+  // Size at the start: a spine is as tall as the book; from the stand, match the book's real on-screen scale
+  const scale0 = isShelf ? launch.rect.h / H : (launch.designScale * launch.designW) / W;
   const D = Math.max(16, launch.thicknessPx / scale0);
   const displayScale = Math.min(1.45, (vp.w - 48) / (W + D * 0.5), (vp.h * 0.6) / H);
   const openScale = Math.min(1.25, (vp.w - 16) / (2 * W), (vp.h * 0.8) / H);
@@ -1562,13 +1756,27 @@ function BookStage({ book, allBooks, today, launch, vp, onClose }) {
     if (closingRef.current && name === 'launch') onClose();
   };
 
-  /** Puts the book back in one motion, from whatever step it is on; the cover closes at the same time. */
+  /** Second half of closing: the cover is shut, so the screen fades and the book returns to its slot. */
+  const moveBack = () => {
+    if (movedBackRef.current) return;
+    movedBackRef.current = true;
+    setDim(false);
+    if (!isShelf) onReturning();                          // the stand's book fades back in while this one fades out
+    setPhase('launch');
+  };
+
+  /** Closing: shut the cover first (quickly) if it is open, then move the book. */
   const requestClose = () => {
     if (closingRef.current) return;
     closingRef.current = true;
-    setDim(false);
-    setCoverOpen(false);
-    setPhase('launch');
+    setClosing(true);
+    if (coverOpen) setCoverOpen(false);                   // moveBack runs when the cover finishes closing
+    else moveBack();
+  };
+
+  /** Runs whenever the cover finishes swinging; during closing that means it is shut. */
+  const onCoverSettled = () => {
+    if (closingRef.current && !coverOpen) moveBack();
   };
 
   /** Opens the cover, but only once the book is showing its front. */
@@ -1579,34 +1787,17 @@ function BookStage({ book, allBooks, today, launch, vp, onClose }) {
     setPhase('open');
   };
 
-  const faceBox = { left: 0, top: 0, width: W, height: H };
-  const pageFontSize = W * 0.068;                         // page text scales with the book
   return html`<div className="stage" onClick=${requestClose}>
     <${motion.div} className="stage-dim" initial=${{ opacity: 0 }} animate=${{ opacity: dim ? 1 : 0 }} transition=${{ duration: DIM_FADE_S }} />
     <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
     <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>
       <${motion.div} className="book3d" style=${{ left: -W / 2, top: -H / 2, width: W, height: H }}
         variants=${variants} initial="launch" animate=${phase} onAnimationComplete=${onPoseDone}>
-        <div className="face page-edge" style=${{ ...faceBox, transform: `translateZ(${-D / 2}px) rotateY(180deg)`, background: '#2a1a10' }}>
-          <${CoverArt} book=${book} width=${W} height=${H} /></div>
-        <div className="face" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${-W / 2}px) rotateY(-90deg)` }}>
-          <${SpineArt} book=${book} width=${D} height=${H} unit=${1 / scale0} /></div>
-        <div className="face page-edge" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${W / 2}px) rotateY(90deg)` }} />
-        <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${-H / 2}px) rotateX(90deg)` }} />
-        <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${H / 2}px) rotateX(-90deg)` }} />
-        <div className="face" style=${{ ...faceBox, transform: `translateZ(${D / 2 - 1}px)`, fontSize: pageFontSize }}>
-          <${StatsPage} book=${book} allBooks=${allBooks} today=${today} /></div>
-        <div style=${{ ...faceBox, position: 'absolute', transformStyle: 'preserve-3d', transform: `translateZ(${D / 2}px)` }}>
-          <${motion.div} style=${{ position: 'absolute', inset: 0, transformOrigin: '0% 50%', transformStyle: 'preserve-3d' }}
-            animate=${{ rotateY: coverOpen ? OPEN_ANGLE_DEG : 0 }} transition=${COVER_SPRING}>
-            <div className="face cover-face" style=${faceBox} onClick=${openCover}>
-              <${CoverArt} book=${book} width=${W} height=${H} /><div className="cover-sheen" /><div className="cover-crease" /></div>
-            <div className="face" style=${{ ...faceBox, transform: 'rotateY(180deg)', fontSize: pageFontSize }}><${SummaryPage} book=${book} /></div>
-          <//>
-        </div>
+        <${BookBox} book=${book} allBooks=${allBooks} today=${today} W=${W} H=${H} D=${D} spineUnit=${isShelf ? 1 / scale0 : undefined} coverOpen=${coverOpen} closing=${closing}
+          onCoverClick=${openCover} onCoverSettled=${onCoverSettled} withPages=${true} />
       <//>
     </div>
-    <div className="stage-hint">${phase === 'display' && !coverOpen ? 'Tap the cover to open' : phase === 'open' ? 'Tap outside to put it back' : ''}</div>
+    <div className="stage-hint">${closing ? '' : phase === 'display' && !coverOpen ? 'Tap the cover to open' : phase === 'open' ? 'Tap outside to put it back' : ''}</div>
   </div>`;
 }
 
@@ -1742,16 +1933,20 @@ function App() {
   }, []);
   const pickReading = useCallback((book, element) => {
     const box = element.getBoundingClientRect();
-    const thicknessPx = SL.spineThickness(book.pages) * (box.width / READING_COVER_W);   // thickness at the same scale as the cover
-    setPicked({ book, launch: launchFromElement('stand', element, { rotateX: STAND_TILT_DEG, rotateY: 0, thicknessPx }) });
+    const turn = Math.cos((STAND_TURN_Y_DEG * Math.PI) / 180);
+    const onScreenScale = box.width / (READING_BOOK_W * turn);   // how big the book is on screen compared with its design size
+    setPicked({ book, launch: launchFromElement('stand', element, {
+      rotateX: BOOK_REST_DEG + STAND_TILT_X_DEG, rotateY: STAND_TURN_Y_DEG, thicknessPx: READING_BOOK_D * onScreenScale,
+      designScale: onScreenScale, designW: READING_BOOK_W }) });
   }, []);
+  const hiddenId = picked && !picked.returning ? picked.book.id : null;   // the stand shows its book again once it is being put back
   const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 
   /** Draws screen i: the reading room or a bookcase. */
   const renderScreen = (i) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
-      ? html`<${ReadingRoom} room=${room} pickedId=${picked && picked.book.id} onPickReading=${pickReading} today=${today} />`
+      ? html`<${ReadingRoom} room=${room} pickedId=${hiddenId} onPickReading=${pickReading} today=${today} />`
       : html`<${Bookcase} room=${room} pickedId=${picked && picked.book.id} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
     return html`<${ScreenFrame} vp=${vp}>${content}<//>`;
   };
@@ -1760,7 +1955,7 @@ function App() {
     <${SwipeTrack} count=${rooms.length} index=${safeIndex} onIndex=${setIndex} vp=${vp} renderScreen=${renderScreen} />
     <${Pager} rooms=${rooms} index=${safeIndex} onIndex=${setIndex} showHint=${showHint} />
     ${picked && html`<${BookStage} key=${picked.book.id} book=${picked.book} allBooks=${books} today=${today} launch=${picked.launch} vp=${vp}
-      onClose=${() => setPicked(null)} />`}
+      onReturning=${() => setPicked((current) => current && { ...current, returning: true })} onClose=${() => setPicked(null)} />`}
   </div><//><//>`;
 }
 

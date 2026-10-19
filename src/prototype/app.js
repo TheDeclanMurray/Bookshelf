@@ -130,16 +130,20 @@ function App() {
   }, []);
   const pickReading = useCallback((book, element) => {
     const box = element.getBoundingClientRect();
-    const thicknessPx = SL.spineThickness(book.pages) * (box.width / READING_COVER_W);   // thickness at the same scale as the cover
-    setPicked({ book, launch: launchFromElement('stand', element, { rotateX: STAND_TILT_DEG, rotateY: 0, thicknessPx }) });
+    const turn = Math.cos((STAND_TURN_Y_DEG * Math.PI) / 180);
+    const onScreenScale = box.width / (READING_BOOK_W * turn);   // how big the book is on screen compared with its design size
+    setPicked({ book, launch: launchFromElement('stand', element, {
+      rotateX: BOOK_REST_DEG + STAND_TILT_X_DEG, rotateY: STAND_TURN_Y_DEG, thicknessPx: READING_BOOK_D * onScreenScale,
+      designScale: onScreenScale, designW: READING_BOOK_W }) });
   }, []);
+  const hiddenId = picked && !picked.returning ? picked.book.id : null;   // the stand shows its book again once it is being put back
   const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 
   /** Draws screen i: the reading room or a bookcase. */
   const renderScreen = (i) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
-      ? html`<${ReadingRoom} room=${room} pickedId=${picked && picked.book.id} onPickReading=${pickReading} today=${today} />`
+      ? html`<${ReadingRoom} room=${room} pickedId=${hiddenId} onPickReading=${pickReading} today=${today} />`
       : html`<${Bookcase} room=${room} pickedId=${picked && picked.book.id} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
     return html`<${ScreenFrame} vp=${vp}>${content}<//>`;
   };
@@ -148,7 +152,7 @@ function App() {
     <${SwipeTrack} count=${rooms.length} index=${safeIndex} onIndex=${setIndex} vp=${vp} renderScreen=${renderScreen} />
     <${Pager} rooms=${rooms} index=${safeIndex} onIndex=${setIndex} showHint=${showHint} />
     ${picked && html`<${BookStage} key=${picked.book.id} book=${picked.book} allBooks=${books} today=${today} launch=${picked.launch} vp=${vp}
-      onClose=${() => setPicked(null)} />`}
+      onReturning=${() => setPicked((current) => current && { ...current, returning: true })} onClose=${() => setPicked(null)} />`}
   </div><//><//>`;
 }
 

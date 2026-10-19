@@ -46,7 +46,7 @@ function StatsPage({ book, allBooks, today }) {
       ? html`<div className="stars" aria-label=${`${book.rating} out of ${STAR_COUNT} stars`}>${Array.from({ length: STAR_COUNT }, (_, i) =>
         html`<span key=${i} className=${'star' + (i < book.rating ? ' on' : '')}>★</span>`)}</div>`
       : html`<div className="pg-author">Not rated yet</div>`}
-    <div><span className=${'status-chip ' + book.status}>${STATUS_LABELS[book.status]}</span></div>
+    <div><span className=${'status-chip st-' + book.status}>${STATUS_LABELS[book.status]}</span></div>
     <dl className="facts">
       ${book.startedAt && html`<${React.Fragment}><dt>Started</dt><dd>${SL.formatShortDate(book.startedAt)}</dd><//>`}
       ${book.finishedAt && html`<${React.Fragment}><dt>Finished</dt><dd>${SL.formatShortDate(book.finishedAt)}</dd><dt>Took</dt><dd>${readDays} ${readDays === 1 ? 'day' : 'days'}</dd><//>`}

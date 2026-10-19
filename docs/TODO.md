@@ -11,7 +11,8 @@
   - [x] Currently Reading on a carved marble stand (desk removed)
   - [x] Round 2 feedback: faster pull-out and put-back, easier swipe, no hover lift, consistent series stickers
   - [x] Per-bookcase sort order (button on the plaque)
-  - [ ] **Try round 2 on the iPhone and report what feels off** (swipe distance, animation speed, marble stand)
+  - [x] Round 3 feedback: slightly slower pull-out, close cover before putting back, 3D marble column stand
+  - [ ] **Try round 3 on the iPhone and report what feels off** (stand look and speed on the real phone, animation timing)
   - [x] Decide: stand or desk (stand, now marble)
   - [ ] Decide: keep CSS 3D, or schedule the Three.js test earlier
 
