@@ -1,3 +1,4 @@
+import './fonts';
 import * as ReactDOM from 'react-dom/client';
 import './styles.css';
 import { FakeData } from './fakeData';
