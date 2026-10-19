@@ -42,7 +42,7 @@ function Pilaster() {
  * A spine on a shelf. Tapping lifts the book out. Memoized so opening one
  * book does not redraw every spine.
  * @param {{placed: {book: Object, thickness: number, height: number}, onPick: function}} props
- * @returns {React.ReactElement} Button containing the spine art
+ * @returns {React.ReactElement} Button containing the spine picture
  */
 const SpineButton = memo(function SpineButton({ placed, onPick }) {
   const { book, thickness, height } = placed;
@@ -52,40 +52,63 @@ const SpineButton = memo(function SpineButton({ placed, onPick }) {
   };
   return html`<button className="spine" data-book-id=${book.id} style=${{ width: thickness, height }}
     aria-label=${`${book.title} by ${book.author}`} onPointerDown=${noteTapStart} onClick=${handleClick}>
-    <${SpineArt} book=${book} width=${thickness} height=${height} />
+    <${SpineImage} book=${book} width=${thickness} height=${height} />
   </button>`;
 });
 
 /**
+ * Whether the bookcase frames have been photographed yet.
+ * @returns {boolean} True when CASE_FRAMES holds pictures
+ */
+function hasCaseFrames() {
+  return typeof CASE_FRAMES !== 'undefined' && CASE_FRAMES !== null;
+}
+
+/**
+ * The photographed frame of a bookcase (crown, columns, shelf boards, base) in the wood of its theme.
+ * @param {{theme: string}} props - Wood theme
+ * @returns {React.ReactElement} Image placed behind the shelves
+ */
+function CaseFrameImage({ theme }) {
+  const place = CASE_FRAMES.placement;
+  return html`<img className="case-frame" alt="" draggable="false" src=${CASE_FRAMES.images[theme] || CASE_FRAMES.images.mahogany}
+    style=${{ left: place.left, top: place.top, width: place.width, height: place.height }} />`;
+}
+
+/**
  * One carved bookcase screen. Memoized: picking a book does not redraw it (the picked spine is hidden
- * by toggling a class from app.js).
- * @param {{room: Object, onPick: function, onCycleSort: function}} props
- *   room is a bookcase room from buildRooms; onPick(book, element) opens a book;
- *   onCycleSort(groupKey) switches this group's sort order
+ * by toggling a class from app.js). The frame is a photograph (renderStatic.mjs) with only the plaque, the
+ * sort button and the spines drawn live; `frame="live"` draws the frame from elements instead, which is how
+ * it gets photographed.
+ * @param {{room: Object, onPick: function, onCycleSort: function, frame?: string, labels?: boolean}} props
+ *   room is a bookcase room from buildRooms; onPick(book, element) opens a book; onCycleSort(groupKey) switches
+ *   this group's sort order; frame is "auto" (photo when available), "photo" or "live"; labels false leaves out
+ *   the plaque and sort button (so they are not photographed)
  * @returns {React.ReactElement} Bookcase element
  */
-const Bookcase = memo(function Bookcase({ room, onPick, onCycleSort }) {
+const Bookcase = memo(function Bookcase({ room, onPick, onCycleSort, frame = 'auto', labels = true }) {
+  const photo = frame === 'photo' || (frame === 'auto' && hasCaseFrames());
   const sortLabel = SL.SORT_MODES.find((m) => m.key === room.sortMode).label;
   // Pad to a full set of shelves so a nearly empty case still looks like furniture
   const shelves = room.shelves.concat(Array.from({ length: SL.SHELVES_PER_CASE - room.shelves.length }, () => []));
-  return html`<div className="case" data-theme=${room.theme}>
+  return html`<div className=${'case' + (photo ? ' is-photo' : '')} data-theme=${room.theme}>
+    ${photo && html`<${CaseFrameImage} theme=${room.theme} />`}
     <div className="crown">
-      <div className="wood" style=${{ position: 'absolute', inset: 0, clipPath: CROWN_WOOD_CLIP, WebkitClipPath: CROWN_WOOD_CLIP,
-        backgroundImage: 'var(--grain), linear-gradient(180deg, rgba(255,255,255,.2), rgba(0,0,0,.05) 45%, rgba(0,0,0,.45))' }} />
-      <${CrownTrim} />
-      <div className="plaque"><div className="plaque-title">${room.title}</div>
+      ${!photo && html`<${React.Fragment}><div className="wood" style=${{ position: 'absolute', inset: 0, clipPath: CROWN_WOOD_CLIP, WebkitClipPath: CROWN_WOOD_CLIP,
+        backgroundImage: 'var(--grain), linear-gradient(180deg, rgba(255,255,255,.2), rgba(0,0,0,.05) 45%, rgba(0,0,0,.45))' }} /><${CrownTrim} /><//>`}
+      ${labels && html`<${React.Fragment}><div className="plaque"><div className="plaque-title">${room.title}</div>
         <div className="plaque-sub">${room.bookCount} ${room.bookCount === 1 ? 'book' : 'books'} · ${sortLabel}</div></div>
-      <button className="sort-btn" aria-label=${`Change order. Now: ${sortLabel}`} onClick=${() => onCycleSort(room.groupKey)}>⇅</button>
+      <button className="sort-btn" aria-label=${`Change order. Now: ${sortLabel}`} onClick=${() => onCycleSort(room.groupKey)}>⇅</button><//>`}
     </div>
     <div className="case-body">
-      <${Pilaster} />
+      ${photo ? html`<div className="pilaster-space" />` : html`<${Pilaster} />`}
       <div className="interior">
         ${shelves.map((shelf, i) => html`<div className="shelf" key=${i}>
           <div className="books">${shelf.map((placed) => html`<${SpineButton} key=${placed.book.id} placed=${placed} onPick=${onPick} />`)}</div>
-          <div className="board" />
+          ${photo ? html`<div className="board-space" />` : html`<div className="board" />`}
         </div>`)}
       </div>
-      <${Pilaster} />
+      ${photo ? html`<div className="pilaster-space" />` : html`<${Pilaster} />`}
     </div>
-    <div className="plinth" />
+    <div className=${photo ? 'plinth-space' : 'plinth'} />
   </div>`;});

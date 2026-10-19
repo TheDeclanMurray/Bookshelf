@@ -16,6 +16,7 @@ const SWIPE_MIN_DISTANCE_PX = 28;                         // ...but never less t
 const SWIPE_MAX_DISTANCE_PX = 56;                         // ...and never more than this, on wide screens
 const SWIPE_FLICK_VELOCITY = 180;                         // a quicker flick (px/s) changes screens whatever the distance
 const DRAG_GUARD_RESET_MS = 90;                           // taps right after a swipe are ignored for this long
+const CASE_RENDER_MARGIN_PX = 60;                         // room around a bookcase when it is photographed (its shadow reaches outside it)
 const HINT_VISIBLE_MS = 6000;                             // the swipe hint fades after this long
 
 /**
@@ -195,6 +196,33 @@ function StandRenderPage() {
   </div>`;
 }
 
-const renderingStand = window.location.hash === '#render-stand';
-if (renderingStand) document.documentElement.classList.add('render-stand');
-ReactDOM.createRoot(document.getElementById('app')).render(renderingStand ? html`<${StandRenderPage} />` : html`<${App} />`);
+/**
+ * Page used only by renderStatic.mjs: an empty bookcase frame (no plaque, no spines) on a transparent
+ * background, in the wood theme named in the address (#render-case=oak).
+ * @param {{theme: string}} props - Wood theme
+ * @returns {React.ReactElement} The frame, drawn live so it can be photographed
+ */
+function CaseRenderPage({ theme }) {
+  const room = { id: 'render', kind: 'case', groupKey: 'render', title: '', theme, shelves: [], bookCount: 0, sortMode: 'library' };
+  return html`<div style=${{ position: 'absolute', left: CASE_RENDER_MARGIN_PX, top: CASE_RENDER_MARGIN_PX }}>
+    <${Bookcase} room=${room} frame="live" labels=${false} onPick=${null} onCycleSort=${null} />
+  </div>`;
+}
+
+/**
+ * Starts the page: first the saved spine pictures and the fonts are made ready (a short, limited wait),
+ * then the first screen is drawn, so spines appear finished instead of popping in. The #render-stand and
+ * #render-case=<theme> addresses draw the pieces renderStatic.mjs photographs instead of the app.
+ * @returns {Promise<void>}
+ */
+async function startPage() {
+  const hash = window.location.hash;
+  const caseTheme = hash.startsWith('#render-case=') ? hash.slice('#render-case='.length) : null;
+  const rendering = hash === '#render-stand' || caseTheme !== null;
+  if (rendering) document.documentElement.classList.add('render-static');
+  else await SpineCache.prepare();
+  const content = caseTheme !== null ? html`<${CaseRenderPage} theme=${caseTheme} />` : hash === '#render-stand' ? html`<${StandRenderPage} />` : html`<${App} />`;
+  ReactDOM.createRoot(document.getElementById('app')).render(content);
+}
+
+startPage();

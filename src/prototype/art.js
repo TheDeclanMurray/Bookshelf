@@ -10,7 +10,6 @@
 const COVER_VIEW_W = 200;                                 // cover drawing coordinate width
 const COVER_VIEW_H = 300;                                 // cover drawing coordinate height
 const COVER_STARS = [[24, 150, 1.4], [170, 140, 1.2], [60, 176, 1], [150, 168, 1.6], [100, 152, 1], [36, 112, 1.2], [176, 98, 1.4]];
-const SPINE_MIN_AUTHOR_WIDTH = 24;                        // thinner spines leave the author off
 
 /**
  * Cover colors derived from a hue.
@@ -101,57 +100,26 @@ function CoverArt({ book, width, height }) {
 }
 
 /**
- * A generated spine. Decoration sizes use `unit` (px per design unit), so the same
- * spine drawn bigger on the 3D book looks identical to the one on the shelf, and
- * stickers and bands line up between books of different heights on a shelf.
- * @param {{book: Object, width: number, height: number, unit?: number}} props - Book, spine size in px, and px per design unit (1 on a shelf)
- * @returns {React.ReactElement} Spine element filling its parent
+ * A spine, shown as the picture drawn once for this book (see spineCanvas.js). One <img> instead of
+ * about eight live elements, and nothing to recompute on later visits.
+ * @param {{book: Object, width: number, height: number, unit?: number, persist?: boolean}} props
+ *   spine size in px, px per design unit (1 on a shelf), and whether the picture may be saved in the browser
+ * @returns {React.ReactElement} Image filling its parent
  */
-function SpineArt({ book, width, height, unit = 1 }) {
-  const genre = SL.genreOf(book);
-  const pal = useMemo(() => SL.spinePalette(book), [book]);
+function SpineImage({ book, width, height, unit = 1, persist = true }) {
   const seriesStyles = useContext(SeriesStyleContext);
   const sticker = book.series && book.seriesNumber ? seriesStyles[book.series] : undefined;   // same for every volume
-  const u = unit;                                         // one design unit in px; the same for every book on a shelf
-  const w = width / u;                                    // width measured in units
-  const style = genre.spineStyle;
-  const hasAuthor = w >= SPINE_MIN_AUTHOR_WIDTH;
-  const hasRoundel = !!sticker;
-  const roundelD = hasRoundel ? sticker.size * u : 0;      // size is shared by the whole series
+  const epoch = useSpineEpoch();                          // pictures are redrawn if the fonts arrive late
+  const url = useMemo(() => spineBitmapUrl({ book, width, height, unit, sticker, persist }), [book, width, height, unit, sticker, persist, epoch]);
+  return html`<img className="spine-img" alt="" draggable="false" src=${url} />`;
+}
 
-  // Vertical layout, in units: decoration at the top, title, author, then series roundel and bottom decoration
-  const top = (style === 'gilt' ? 17 : style === 'block' ? 23 : style === 'stripe' ? 15 : 10) * u;
-  const bottom = (hasRoundel ? sticker.size + 21 : (style === 'gilt' ? 17 : 11)) * u;
-  const region = height - top - bottom;
-  const surname = book.author.split(' ').pop();
-  const titleFit = (titleHeight) => titleHeight / (book.title.length * 0.6);   // largest font that keeps the title on one line
-
-  // Show the author only if the title still fits at a readable size next to it
-  let authorH = hasAuthor ? Math.min(region * 0.34, surname.length * 7.2 * u) : 0;
-  let titleH = region - authorH - (authorH ? 4 * u : 0);
-  if (authorH && titleFit(titleH) < 8.5 * u) { authorH = 0; titleH = region; }   // title needs the room more
-
-  // Title size: limited by spine width and shrunk so the title fits on one line
-  let fontSize = Math.min(width * 0.44, 17 * u) * genre.fontScale;
-  fontSize = Math.min(fontSize, titleFit(titleH));
-  fontSize = Math.max(fontSize, 7.5 * u);
-  const onLabel = style === 'label';
-  const titleColor = onLabel ? '#2a1d12' : (style === 'gilt' && !pal.isLight ? pal.accent : pal.text);
-  const stripeColor = `hsl(${(book.hue + 150) % 360}, 80%, 62%)`;
-  const band = (y, thick) => html`<div className="sp-band" style=${{ top: y, height: thick, background: pal.accent, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.35), 0 1px 0 rgba(0,0,0,.4)' }} />`;
-
-  return html`<div className="spine-art" style=${{ background: `linear-gradient(90deg, ${pal.bgDark}, ${pal.bg} 24%, ${pal.bg} 62%, ${pal.bgDark})`, color: pal.text }}>
-    ${style === 'gilt' && html`<${React.Fragment}>${band(6 * u, 2 * u)}${band(10.5 * u, 1 * u)}${band(height - 8 * u, 2 * u)}${band(height - 12.5 * u, 1 * u)}<//>`}
-    ${style === 'stripe' && html`<${React.Fragment}>
-      <div className="sp-band" style=${{ top: 7 * u, height: 3 * u, background: stripeColor, boxShadow: `0 0 ${6 * u}px ${stripeColor}` }} />
-      <div className="sp-band" style=${{ top: height - 9 * u, height: 1.5 * u, background: stripeColor, opacity: 0.8 }} /><//>`}
-    ${style === 'block' && html`<div className="sp-band" style=${{ top: 0, height: 19 * u, background: pal.accent, opacity: 0.92 }} />`}
-    ${onLabel && html`<div className="sp-label" style=${{ top: top - 2 * u, height: titleH + 4 * u, width: width - 6 * u }} />`}
-    <div className="sp-title" style=${{ top, height: titleH, fontFamily: genre.font, fontSize, color: titleColor, lineHeight: 1,
-      textShadow: onLabel ? 'none' : '0 1px 1px rgba(0,0,0,.45)' }}>${book.title}</div>
-    ${authorH > 0 && html`<div className="sp-author" style=${{ top: top + titleH + 4 * u, height: authorH, fontFamily: 'var(--font-display)',
-      fontSize: Math.min(width * 0.3, 9.5 * u, authorH / (surname.length * 0.85)), color: pal.text, opacity: 0.8, letterSpacing: '0.08em', textTransform: 'uppercase' }}>${surname}</div>`}
-    ${hasRoundel && html`<div className="sp-roundel" style=${{ bottom: (style === 'gilt' ? 16 : 11) * u, width: roundelD, height: roundelD, background: sticker.bg,
-      color: sticker.text, fontSize: roundelD * 0.64, fontFamily: 'var(--font-display)', boxShadow: `0 0 0 ${Math.max(0.6, 0.9 * u)}px ${sticker.ring}, 0 1px 2px rgba(0,0,0,.5)` }}>${book.seriesNumber}</div>`}
-  </div>`;
+/**
+ * Re-renders the component when cached spine pictures are redrawn.
+ * @returns {number} Current epoch
+ */
+function useSpineEpoch() {
+  const [epoch, setEpoch] = useState(SpineCache.getEpoch());
+  useEffect(() => SpineCache.subscribe(setEpoch), []);
+  return epoch;
 }

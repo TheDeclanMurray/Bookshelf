@@ -17,8 +17,6 @@
   --grain: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='0.012 0.55' numOctaves='3' seed='7'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  1.3 0 0 0 -0.42'/></filter><rect width='100%' height='100%' filter='url(%23g)' opacity='0.55'/></svg>");
   /* marble veins: dark filaments from SVG turbulence, tiled, used by the 3D stand */
   --vein: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='v' x='0' y='0' width='100%' height='100%'><feTurbulence type='turbulence' baseFrequency='0.007 0.017' numOctaves='3' seed='12' stitchTiles='stitch'/><feColorMatrix type='matrix' values='0 0 0 0 0.3  0 0 0 0 0.33  0 0 0 0 0.4  1 0 0 0 0'/><feComponentTransfer><feFuncA type='table' tableValues='0.8 0.28 0 0 0 0 0'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23v)'/></svg>");
-  /* leather / cloth speckle for spines */
-  --cloth: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0.9 0 0 0 -0.25'/></filter><rect width='100%' height='100%' filter='url(%23c)' opacity='0.5'/></svg>");
 }
 
 html, body { height: 100%; }
@@ -88,6 +86,12 @@ button { font: inherit; color: inherit; }
 .sort-btn:active { transform: translateY(1px); }
 
 .case-body { display: flex; position: relative; }
+/* When the frame is a photograph these keep the same spacing but draw nothing */
+.case-frame { position: absolute; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.pilaster-space { width: 28px; flex: none; }
+.board-space { height: 14px; flex: none; }
+.plinth-space { height: 34px; }
+.case.is-photo .interior { background: none; box-shadow: none; }
 .pilaster { width: 28px; flex: none; position: relative; }
 .pilaster::before { content: ""; position: absolute; left: 4px; right: 4px; top: 16px; bottom: 16px;
   background: repeating-linear-gradient(90deg, rgba(0,0,0,.45) 0 1.5px, rgba(255,255,255,.12) 1.5px 3.5px, rgba(0,0,0,.2) 3.5px 6px, transparent 6px 7px); }
@@ -111,16 +115,7 @@ button { font: inherit; color: inherit; }
 /* ----------------------------------------------------------------- spines */
 .spine { position: relative; flex: none; padding: 0; border: 0; border-radius: 2px 2px 0 0; cursor: pointer; background: none; }
 .spine.is-out { visibility: hidden; }
-.spine-art { position: absolute; inset: 0; overflow: hidden; border-radius: 2px 2px 0 0; }
-.spine-art::before { content: ""; position: absolute; inset: 0; background-image: var(--cloth); mix-blend-mode: multiply; opacity: .7; }
-.spine-art::after { content: ""; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(90deg, rgba(0,0,0,.42), rgba(255,255,255,.14) 16%, rgba(255,255,255,0) 38%, rgba(0,0,0,.12) 70%, rgba(0,0,0,.42)),
-              linear-gradient(180deg, rgba(0,0,0,.28), transparent 12%, transparent 88%, rgba(0,0,0,.3)); }
-.sp-title, .sp-author { position: absolute; left: 0; right: 0; margin: 0 auto; writing-mode: vertical-rl; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: start; z-index: 1; }
-.sp-title { display: flex; align-items: center; justify-content: flex-start; width: max-content; }
-.sp-band { position: absolute; left: 0; right: 0; z-index: 1; background: linear-gradient(90deg, rgba(0,0,0,.3), rgba(255,255,255,.35) 40%, rgba(0,0,0,.25)); }
-.sp-roundel { position: absolute; left: 50%; border-radius: 50%; z-index: 1; display: grid; place-items: center; font-weight: 700; transform: translateX(-50%); }
-.sp-label { position: absolute; left: 50%; transform: translateX(-50%); z-index: 1; background: #eadfc4; box-shadow: inset 0 0 0 1px rgba(0,0,0,.3), 0 1px 1px rgba(0,0,0,.4); }
+.spine-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; -webkit-user-drag: none; }
 
 /* ------------------------------------------------------------ reading room */
 .reading { width: 360px; height: 700px; position: relative; }
@@ -159,6 +154,8 @@ button { font: inherit; color: inherit; }
 .cover-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, rgba(255,255,255,.22), rgba(255,255,255,0) 34%, rgba(0,0,0,.18)); }
 .cover-crease { position: absolute; left: 4.5%; top: 0; bottom: 0; width: 2px; background: rgba(0,0,0,.35); box-shadow: 1px 0 0 rgba(255,255,255,.14); pointer-events: none; }
 .page-edge { background-color: #e9dfc6; background-image: repeating-linear-gradient(0deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px), linear-gradient(90deg, rgba(0,0,0,.25), rgba(0,0,0,0) 30%, rgba(0,0,0,.2)); }
+.page-edge::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-color: rgba(14, 9, 5, 0); transition: background-color 0.4s ease-out; }
+.book3d.in-slot .page-edge::after { background-color: rgba(14, 9, 5, 0.86); }   /* in the shelf the page edges are in shadow; not opacity, which would flatten the 3D book */
 .page-edge.h { background-image: repeating-linear-gradient(90deg, rgba(0,0,0,.14) 0 1px, transparent 1px 3px), linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,0) 40%, rgba(0,0,0,.2)); }
 .stage-close { position: absolute; top: max(14px, env(safe-area-inset-top, 0px)); right: max(16px, env(safe-area-inset-right, 0px)); z-index: 3; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--brass-dim);
   background: rgba(0,0,0,.45); color: var(--brass); font: 400 22px/1 var(--font-display); cursor: pointer; display: grid; place-items: center; }
@@ -195,5 +192,5 @@ button { font: inherit; color: inherit; }
   .tap-ring { animation: none; }
 }
 
-/* renderStand.mjs photographs the column on a transparent background */
-html.render-stand, html.render-stand body, html.render-stand #app { background: transparent !important; }
+/* renderStatic.mjs photographs the stand and the bookcase frames on a transparent background */
+html.render-static, html.render-static body, html.render-static #app { background: transparent !important; }

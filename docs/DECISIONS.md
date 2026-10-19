@@ -45,3 +45,8 @@
 | 2026-10-19 | The column is photographed once (`renderStand.mjs`) and shown as an image; only the book and its brass lip stay live 3D | The column never moves, so live 3D pieces were pure cost |
 | 2026-10-19 | Marble veins use warped fractal noise (the middle contour of the noise), not sines | Sines made dotted loops; noise contours give continuous winding veins |
 | 2026-10-19 | Next static candidates are per-book spine bitmaps (cached in the browser and S3) and per-theme bookcase frames | Spines are about 65% of a bookcase's elements and each uses a blend mode; frames are identical across a theme |
+| 2026-10-19 | Spines are drawn once on a canvas and shown as one image each, cached in memory and IndexedDB (browser only for now) | A spine was about 7.5 live elements with a blend effect; drawing is deterministic and cheap, and the picture can later also go to S3 |
+| 2026-10-19 | Spine layout is a pure module (`spineLayout.js`) separate from drawing (`spineCanvas.js`) | It can be unit tested, and there is one layout for every size (shelf and stage) |
+| 2026-10-19 | Bookcase frames are photographed per wood theme at build time; plaque, sort button and spines stay live | The frame is identical for every book in a theme |
+| 2026-10-19 | A book's page edges start in shadow and brighten as it leaves the shelf (a CSS color change on an overlay, never opacity) | With real perspective, a book above the screen center shows its bottom edge, which looked like a white flash at the shelf |
+| 2026-10-19 | Phase 0 rendering work is finished; covers stay generated drawings until the real app supplies cover images | Real covers are images from the backend, so they need no drawing code |

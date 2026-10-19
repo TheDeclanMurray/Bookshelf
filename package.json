@@ -6,6 +6,6 @@
   "scripts": {
     "test": "node --test \"src/tests/**/*.test.js\" \"src/tests/**/*.test.mjs\"",
     "build:prototype": "node src/prototype/build.mjs",
-    "render:stand": "node src/prototype/renderStand.mjs"
+    "render:static": "node src/prototype/renderStatic.mjs"
   }
 }

@@ -16,3 +16,7 @@
 | 2026-10-19 | CSS `scale()` does not scale depth, so the projected book was off by about 4% from the model | Poses use `scale3d()` |
 | 2026-10-19 | Hairline dark gaps showed between the flutes of the new shaft, because facets that meet at an angle leave sub-pixel seams that show whatever is behind | Facets are drawn 1.2 px wider, and a solid core sits just inside the shaft |
 | 2026-10-19 | The photographed column first appeared far to the lower right, and a flat image inside the 3D group would also have hidden the upper part of the book (it sits at depth 0) | The image is placed in scene pixels as a flat child of the scene, drawn before the 3D group |
+| 2026-10-19 | The first stand photograph was silently cut off at the window edge (the window was 13 px too narrow), so it was stretched slightly when shown | Photographs now use roomy windows, and the script stops with an error if a photograph would not fit |
+| 2026-10-19 | The bookcase frame first appeared stretched for the same reason (window 392 px, frame 422 px) | Same fix; the bookcase is photographed with 60 px of room around it |
+| 2026-10-19 | The stand screenshot timed out at 3x in a bigger window in software rendering | Screenshot timeout raised to 3 minutes; windows sized per piece |
+| 2026-10-19 | A book in a high slot showed a bright strip under its spine at the start of the pull-out, because real perspective reveals its bottom page edge | Page edges start in shadow and brighten as the book leaves the shelf |

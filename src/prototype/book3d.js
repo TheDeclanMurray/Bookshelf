@@ -23,7 +23,7 @@ const BookBox = memo(function BookBox({ book, allBooks, today, W, H, D, spineUni
     <div className="face page-edge" style=${{ ...faceBox, transform: `translateZ(${-D / 2}px) rotateY(180deg)`, background: '#2a1a10' }}>
       <${CoverArt} book=${book} width=${W} height=${H} /></div>
     <div className="face" data-face="spine" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${-W / 2}px) rotateY(-90deg)` }}>
-      <${SpineArt} book=${book} width=${D} height=${H} unit=${spineUnit || H / SL.SPINE_BASE_HEIGHT_PX} /></div>
+      <${SpineImage} book=${book} width=${D} height=${H} unit=${spineUnit || H / SL.SPINE_BASE_HEIGHT_PX} persist=${false} /></div>
     <div className="face page-edge" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${W / 2}px) rotateY(90deg)` }} />
     <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${-H / 2}px) rotateX(90deg)` }} />
     <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${H / 2}px) rotateX(-90deg)` }} />

@@ -47,20 +47,42 @@ Picking a book (221) and swiping to a new screen (253) are mostly mounting new c
 ## The handoff between shelf and stage
 The stage book is a separate 3D object. To avoid a jump, `poseSolver.js` solves for the exact pose that puts its face on top of the real spine (or the stand book's cover), using the corners measured on screen and the same perspective as the stage. Measured gap at rest: 0-1 px. The solver is unit tested.
 
-## Static parts are photographed once
-Anything that never moves is drawn once into an image instead of being kept as live elements.
-- **The stand's Ionic column** (plinth, Attic base, 24-flute shaft, scroll capital, abacus, wedge) is built in 3D in `ionic.js`/`stand3d.js`, photographed by `npm run render:stand` (Playwright, 3x pixel ratio, transparent background) into `assets/stand.webp` (84 KB) and embedded by `standAsset.js`. Only the book and its brass lip stay live, in the identical camera, so they line up with the picture.
-- Result (headless Chromium): 3D layers on the Currently Reading screen 142 -> 4, page elements 610 -> 472, and returning to the stand after swiping away went from 6 fps for a second to 61 fps straight away.
-- Re-run the render whenever `ionic.js`, `stand3d.js` or `texture.js` change: `npm run build:prototype && npm run render:stand && npm run build:prototype`.
-- The image must be a flat child of the scene, drawn before the 3D group. Inside the group it would sit at depth 0 and hide the upper part of the leaning book.
+## Static parts are drawn once
+Anything that does not change is drawn once into a picture instead of being kept as live elements.
 
-## Next candidates (measured on the Fantasy bookcase: 221 elements)
-| Part | Elements | Notes |
+| Part | How it is made | Where it is kept |
 |---|---|---|
-| 19 spines | 143 (about 7.5 each), all using a `multiply` blend overlay | Biggest. One bitmap per book would be 1 element each with no blend |
-| Bookcase frame (crown, pilasters, boards, plinth) | 78 | Same for every book in a theme: one image per theme (14 themes) |
+| Stand column (Ionic) | Built in 3D (`ionic.js`, `stand3d.js`), photographed by `npm run render:static` (3x) | `assets/stand.webp`, embedded by `standAsset.js` |
+| Bookcase frame (crown, columns, boards, base), one per wood theme (13) | The live bookcase with no books or labels, photographed at 2x | `assets/case-<theme>.webp`, embedded by `caseAsset.js` |
+| Each spine | Drawn on a canvas at 2x-3x (`spineLayout.js` decides the layout, `spineCanvas.js` draws it) | Memory plus the browser's IndexedDB (`spineCache.js`) |
 
-Spine bitmaps are drawn once per book on a canvas (title on its side, author, series sticker, bands) at 3x pixel ratio, about 20 KB each, and cached in the browser (IndexedDB) and optionally in S3 so a new device or a sibling's phone does not redraw them and the stage's 3D book can use the same picture. The cache key is book id + design version + pixel ratio, so a design change simply makes new pictures. Fonts must be loaded before drawing. Frames are photographed at build time like the stand.
+What stays live: the plaque and sort button, the tappable spines (now one `<img>` each), the 3D book on the stage, and the page text.
+
+**Spine cache rules**
+- The key is the design version + book id + size + pixel ratio + a hash of everything that affects the picture (title, author, genre, color, series, sticker). Change any of them and a new picture is drawn; old ones age out (600 kept).
+- A picture is only saved once the web fonts are confirmed loaded. Pictures drawn before that are kept for this visit only and redrawn when the fonts arrive, so wrong letters are never stored.
+- The first screen waits up to 1.5 s for saved pictures and 2.5 s for fonts, then draws; slower things finish in the background.
+- If IndexedDB is unavailable (private window) everything still works from memory.
+- The big 3D copy of a spine on the stage is drawn at the screen's size and not saved.
+- To redraw everything after a design change, bump `DESIGN_VERSION` in `spineLayout.js`.
+
+**Re-photographing** (after changing `ionic.js`, `stand3d.js`, `texture.js`, `bookcase.js` or the bookcase CSS): `npm run build:prototype && npm run render:static && npm run build:prototype`. The script refuses to save a photograph that would be cut off by its window.
+
+**Rules for the photographs**
+- The stand image must be a flat child of the scene, drawn before the 3D group. Inside the group it would sit at depth 0 and hide the upper part of the leaning book.
+- The frame image is placed behind the shelves; spacing elements keep the same sizes, so spines land exactly where they did.
+
+**Measured (headless Chromium, phone size, Fantasy bookcase)**
+| | Before | After |
+|---|---|---|
+| Elements in one bookcase | 221 | 58 |
+| Elements in its 19 spines | 143 | 38 |
+| Spines using a blend effect | 19 | 0 |
+| Whole page, stand screen | 610 | 214 |
+| 3D layers on the stand screen | 142 | 4 |
+| Returning to the stand after swiping away | 6 fps for a second | 61 fps at once |
+| Spines drawn on a second visit | 29 | 0 |
+Cost: the page grew from about 135 KB to about 1 MB (the pictures are embedded), which is fine for a prototype. In the real app the pictures are separate cached files.
 
 ## Known costs and ideas, in order of payoff
 1. ~~Layer count on the Currently Reading screen~~ Done: the column is an image.

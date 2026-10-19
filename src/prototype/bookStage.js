@@ -121,7 +121,9 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   // Pull the book out as soon as the stage exists
   useLayoutEffect(() => {
     const dim = dimRef.current;
-    requestAnimationFrame(() => dim.classList.add('is-on'));
+    const book = poseRef.current;
+    if (isShelf) book.classList.add('in-slot');           // page edges start in the shelf's shadow (see styles.css)
+    requestAnimationFrame(() => { dim.classList.add('is-on'); book.classList.remove('in-slot'); });   // ...and brighten as the book comes out
     const hump = [   // out toward you and back: slows to a stop at the peak, so there is no kink
       { transform: LIFT_FLAT, easing: 'cubic-bezier(0.3, 0, 0.5, 1)' },
       { transform: `translateZ(${PULL_DEPTH_PX}px)`, offset: 0.4, easing: 'cubic-bezier(0.5, 0, 0.7, 1)' },
@@ -143,6 +145,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   /** Slides the book back into its slot and ends the stage. */
   const moveBack = (knownFrom) => {
     dimRef.current.classList.remove('is-on');
+    if (isShelf) poseRef.current.classList.add('in-slot');   // darken the page edges again on the way back into the shadow
     if (!isShelf) onReturning();                          // the stand's book fades back in underneath
     playMotionTo(liftRef.current, { transform: LIFT_FLAT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT });
     playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom })
