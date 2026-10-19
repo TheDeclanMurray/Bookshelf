@@ -87,7 +87,7 @@ button { font: inherit; color: inherit; }
 
 .case-body { display: flex; position: relative; }
 /* When the frame is a photograph these keep the same spacing but draw nothing */
-.case-frame { position: absolute; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.case-frame { position: absolute; max-width: none; max-height: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .pilaster-space { width: 28px; flex: none; }
 .board-space { height: 14px; flex: none; }
 .plinth-space { height: 34px; }
@@ -126,7 +126,7 @@ button { font: inherit; color: inherit; }
 .stand-anchor { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
 .stand3d { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
 .f3-group { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-style: preserve-3d; }
-.stand-image { position: absolute; pointer-events: none; user-select: none; -webkit-user-drag: none; }
+.stand-image { position: absolute; max-width: none; max-height: none; pointer-events: none; user-select: none; -webkit-user-drag: none; }
 .f3 { position: absolute; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .f3-edge { box-shadow: inset 0 0 0 0.6px rgba(40, 44, 56, .35); }
 .floor-shadow { position: absolute; left: -170px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65), rgba(0,0,0,0) 66%); }
