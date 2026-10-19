@@ -12,24 +12,25 @@ const STAND_TOP_Y = 218;                                  // where the abacus' t
 
 /**
  * The reading screen.
- * @param {{room: Object, pickedId: (string|null), onPickReading: function, today: string}} props
+ * Memoized: picking the book does not redraw the stand.
+ * @param {{room: Object, onPickReading: function, today: string}} props
  *   room.book is the current book or null; onPickReading(book, element) opens the book;
  *   today is YYYY-MM-DD for the day count
  * @returns {React.ReactElement} Reading room element
  */
-function ReadingRoom({ room, pickedId, onPickReading, today }) {
+const ReadingRoom = memo(function ReadingRoom({ room, onPickReading, today }) {
   const book = room.book;
   const days = book && book.startedAt ? SL.daysBetween(book.startedAt, today) : 0;
-  const handleClick = (event) => {
+  const handleClick = useCallback((event) => {
     if (!isRealTap(event)) return;                         // ignore the touch that ends a swipe
     onPickReading(book, event.currentTarget);
-  };
+  }, [book, onPickReading]);
   return html`<div className="reading case" data-theme="mahogany">
     <div className="reading-label">Currently Reading</div>
     <div className="scene">
       <div className="stand-glow" />
       <div className="stand-anchor" style=${{ top: STAND_TOP_Y }}>
-        <${MarbleStand} book=${book} W=${READING_BOOK_W} H=${READING_BOOK_H} D=${READING_BOOK_D} hidden=${!!book && pickedId === book.id} onBookClick=${handleClick} />
+        <${MarbleStand} book=${book} W=${READING_BOOK_W} H=${READING_BOOK_H} D=${READING_BOOK_D} onBookClick=${handleClick} />
       </div>
     </div>
     ${book ? html`<div className="reading-info">
@@ -37,5 +38,4 @@ function ReadingRoom({ room, pickedId, onPickReading, today }) {
       <div className="reading-author">${book.author}</div>
       <div className="reading-meta">Day ${days + 1} · started ${SL.formatShortDate(book.startedAt)}${book.series ? ' · ' + SL.seriesLabel(book) : ''}</div>
     </div>` : html`<div className="reading-empty">The stand is empty. Pull something from your To Be Read shelf.</div>`}
-  </div>`;
-}
+  </div>`;});

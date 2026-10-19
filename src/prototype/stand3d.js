@@ -153,11 +153,12 @@ function Wedge3D() {
 /**
  * The whole stand with the book resting on it. The book is a real 3D book so tapping it
  * can hand over to the stage with the same shape.
- * @param {{book: (Object|null), W: number, H: number, D: number, hidden: boolean, onBookClick: function}} props
- *   W, H, D are the book's width, height and thickness; hidden hides the book while it is on the stage
+ * Memoized so picking the book does not redraw its ~190 facets (the book is hidden by toggling a class).
+ * @param {{book: (Object|null), W: number, H: number, D: number, onBookClick: function}} props
+ *   W, H, D are the book's width, height and thickness
  * @returns {React.ReactElement} Stand scene content (position it inside a perspective container)
  */
-function MarbleStand({ book, W, H, D, hidden, onBookClick }) {
+const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick }) {
   return html`<div className="stand3d" style=${{ transform: `rotateX(${STAND_TILT_X_DEG}deg) rotateY(${STAND_TURN_Y_DEG}deg) scale(${STAND_SCALE})` }}>
     <div className="floor-shadow" style=${{ top: FLOOR_Y - 170, transform: 'rotateX(90deg)' }} />
     <${Box3D} w=${196} h=${16} d=${196} y=${218} /><${Box3D} w=${172} h=${34} d=${172} y=${184} />
@@ -169,10 +170,9 @@ function MarbleStand({ book, W, H, D, hidden, onBookClick }) {
     <${Box3D} w=${146} h=${6} d=${146} y=${10} /><${Box3D} w=${158} h=${10} d=${158} y=${0} />
     <${Wedge3D} />
     <${Box3D} w=${W + 14} h=${5} d=${6} y=${-5} z=${BOOK_REST_Z - 3} tint="brass" />
-    ${book && html`<div className=${'rest-book' + (hidden ? ' is-out' : '')} style=${{ left: -W / 2, top: -H, width: W, height: H,
+    ${book && html`<div className="rest-book" data-book-id=${book.id} style=${{ left: -W / 2, top: -H, width: W, height: H,
       transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
-      <${BookBox} book=${book} W=${W} H=${H} D=${D} coverOpen=${false} closing=${false} withPages=${false}
+      <${BookBox} book=${book} W=${W} H=${H} D=${D} withPages=${false}
         onCoverClick=${onBookClick} coverExtras=${html`<span className="tap-ring" />`} />
     </div>`}
-  </div>`;
-}
+  </div>`;});

@@ -145,9 +145,12 @@ button { font: inherit; color: inherit; }
 
 /* ------------------------------------------------------------------- stage */
 .stage { position: fixed; inset: 0; z-index: 50; perspective: 1300px; perspective-origin: 50% 46%; touch-action: none; }
-.stage-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, rgba(30,18,10,.72), rgba(6,3,2,.93)); }
+.stage-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, rgba(30,18,10,.72), rgba(6,3,2,.93)); opacity: 0; transition: opacity 0.3s ease-out; }
+.stage-dim.is-on { opacity: 1; }
 .stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
-.book3d { position: absolute; transform-style: preserve-3d; }
+.book3d { position: absolute; transform-style: preserve-3d; will-change: transform; }   /* never opacity: that would flatten the 3D book */
+.book-lift { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
+.hinge { position: absolute; inset: 0; transform-origin: 0% 50%; transform-style: preserve-3d; will-change: transform; }
 .face { position: absolute; backface-visibility: hidden; -webkit-backface-visibility: hidden; overflow: hidden; }
 .cover-face { cursor: pointer; }
 .cover-sheen { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(105deg, rgba(255,255,255,.22), rgba(255,255,255,0) 34%, rgba(0,0,0,.18)); }

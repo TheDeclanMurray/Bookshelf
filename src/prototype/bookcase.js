@@ -41,29 +41,30 @@ function Pilaster() {
 /**
  * A spine on a shelf. Tapping lifts the book out. Memoized so opening one
  * book does not redraw every spine.
- * @param {{placed: {book: Object, thickness: number, height: number}, isOut: boolean, onPick: function}} props
+ * @param {{placed: {book: Object, thickness: number, height: number}, onPick: function}} props
  * @returns {React.ReactElement} Button containing the spine art
  */
-const SpineButton = memo(function SpineButton({ placed, isOut, onPick }) {
+const SpineButton = memo(function SpineButton({ placed, onPick }) {
   const { book, thickness, height } = placed;
   const handleClick = (event) => {
     if (!isRealTap(event)) return;                        // ignore the touch that ends a swipe
     onPick(book, event.currentTarget);
   };
-  return html`<button className=${'spine' + (isOut ? ' is-out' : '')} style=${{ width: thickness, height }}
+  return html`<button className="spine" data-book-id=${book.id} style=${{ width: thickness, height }}
     aria-label=${`${book.title} by ${book.author}`} onPointerDown=${noteTapStart} onClick=${handleClick}>
     <${SpineArt} book=${book} width=${thickness} height=${height} />
   </button>`;
 });
 
 /**
- * One carved bookcase screen.
- * @param {{room: Object, pickedId: (string|null), onPick: function, onCycleSort: function}} props
+ * One carved bookcase screen. Memoized: picking a book does not redraw it (the picked spine is hidden
+ * by toggling a class from app.js).
+ * @param {{room: Object, onPick: function, onCycleSort: function}} props
  *   room is a bookcase room from buildRooms; onPick(book, element) opens a book;
  *   onCycleSort(groupKey) switches this group's sort order
  * @returns {React.ReactElement} Bookcase element
  */
-function Bookcase({ room, pickedId, onPick, onCycleSort }) {
+const Bookcase = memo(function Bookcase({ room, onPick, onCycleSort }) {
   const sortLabel = SL.SORT_MODES.find((m) => m.key === room.sortMode).label;
   // Pad to a full set of shelves so a nearly empty case still looks like furniture
   const shelves = room.shelves.concat(Array.from({ length: SL.SHELVES_PER_CASE - room.shelves.length }, () => []));
@@ -80,13 +81,11 @@ function Bookcase({ room, pickedId, onPick, onCycleSort }) {
       <${Pilaster} />
       <div className="interior">
         ${shelves.map((shelf, i) => html`<div className="shelf" key=${i}>
-          <div className="books">${shelf.map((placed) => html`<${SpineButton} key=${placed.book.id} placed=${placed}
-            isOut=${pickedId === placed.book.id} onPick=${onPick} />`)}</div>
+          <div className="books">${shelf.map((placed) => html`<${SpineButton} key=${placed.book.id} placed=${placed} onPick=${onPick} />`)}</div>
           <div className="board" />
         </div>`)}
       </div>
       <${Pilaster} />
     </div>
     <div className="plinth" />
-  </div>`;
-}
+  </div>`;});

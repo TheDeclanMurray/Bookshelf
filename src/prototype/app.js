@@ -106,6 +106,16 @@ function launchFromElement(kind, element, extras) {
 }
 
 /**
+ * Hides or shows the spine or stand book that is currently on the stage. Done on the element
+ * directly so the screens do not re-render (a re-render at that moment would stutter the pull-out).
+ * @param {string} bookId - Book id
+ * @param {boolean} hidden - True to hide, false to show
+ */
+function setSceneBookHidden(bookId, hidden) {
+  document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((element) => element.classList.toggle('is-out', hidden));
+}
+
+/**
  * The whole prototype.
  * @returns {React.ReactElement} App element
  */
@@ -126,25 +136,26 @@ function App() {
   const cycleSort = useCallback((groupKey) => setSortModes((current) => ({ ...current, [groupKey]: SL.nextSortMode(current[groupKey] || 'library') })), []);
   const pickFromShelf = useCallback((book, element) => {
     const launch = launchFromElement('shelf', element, { rotateX: 0, rotateY: 90, thicknessPx: element.getBoundingClientRect().width });
+    setSceneBookHidden(book.id, true);
     setPicked({ book, launch });
   }, []);
   const pickReading = useCallback((book, element) => {
     const box = element.getBoundingClientRect();
     const turn = Math.cos((STAND_TURN_Y_DEG * Math.PI) / 180);
     const onScreenScale = box.width / (READING_BOOK_W * turn);   // how big the book is on screen compared with its design size
+    setSceneBookHidden(book.id, true);
     setPicked({ book, launch: launchFromElement('stand', element, {
       rotateX: BOOK_REST_DEG + STAND_TILT_X_DEG, rotateY: STAND_TURN_Y_DEG, thicknessPx: READING_BOOK_D * onScreenScale,
       designScale: onScreenScale, designW: READING_BOOK_W }) });
   }, []);
-  const hiddenId = picked && !picked.returning ? picked.book.id : null;   // the stand shows its book again once it is being put back
   const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 
   /** Draws screen i: the reading room or a bookcase. */
   const renderScreen = (i) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
-      ? html`<${ReadingRoom} room=${room} pickedId=${hiddenId} onPickReading=${pickReading} today=${today} />`
-      : html`<${Bookcase} room=${room} pickedId=${picked && picked.book.id} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
+      ? html`<${ReadingRoom} room=${room} onPickReading=${pickReading} today=${today} />`
+      : html`<${Bookcase} room=${room} onPick=${pickFromShelf} onCycleSort=${cycleSort} />`;
     return html`<${ScreenFrame} vp=${vp}>${content}<//>`;
   };
 
@@ -152,7 +163,7 @@ function App() {
     <${SwipeTrack} count=${rooms.length} index=${safeIndex} onIndex=${setIndex} vp=${vp} renderScreen=${renderScreen} />
     <${Pager} rooms=${rooms} index=${safeIndex} onIndex=${setIndex} showHint=${showHint} />
     ${picked && html`<${BookStage} key=${picked.book.id} book=${picked.book} allBooks=${books} today=${today} launch=${picked.launch} vp=${vp}
-      onReturning=${() => setPicked((current) => current && { ...current, returning: true })} onClose=${() => setPicked(null)} />`}
+      onReturning=${() => setSceneBookHidden(picked.book.id, false)} onClose=${() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }} />`}
   </div><//><//>`;
 }
 
