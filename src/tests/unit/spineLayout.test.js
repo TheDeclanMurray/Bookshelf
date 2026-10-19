@@ -1,12 +1,13 @@
 /**
- * Unit tests for src/prototype/spineLayout.js (spine layout and cache keys).
+ * Unit tests for src/app/spineLayout.js (spine layout and cache keys).
  * Run with: npm test
  */
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const SL = require('../prototype/shelfLogic');
-const Layout = require('../prototype/spineLayout');
-const { buildFakeLibrary } = require('../prototype/fakeData');
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { ShelfLogic as SL } from '../../app/shelfLogic';
+import { SpineLayout as Layout } from '../../app/spineLayout';
+import { FakeData } from '../../app/fakeData';
+const { buildFakeLibrary } = FakeData;
 
 const sticker = { size: 15, bg: 'hsl(1,1%,1%)', text: 'black', ring: 'grey' };
 /** Builds a layout for a test book with sensible defaults. */

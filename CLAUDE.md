@@ -12,7 +12,7 @@ A personal media tracker that looks like an ornate, old library, as a PWA for iP
 ## File & Folder Structure
 - `docs/`: architecture, scope, decisions, issues, TODO
 - `src/prototype/`: Phase 0 prototype source (logic, fake data, UI files, `build.mjs`) and the built `bookshelf-prototype.html`
-- `src/`: real application code (not started)
+- `src/app/`: real application code (Phase 1 port of the prototype: TypeScript/TSX modules, `noImplicitAny` off for now, shared types in `types.ts`). Run with `npm run dev`; entry is `index.html` -> `src/app/app.tsx`
 - `src/tests/`: unit and integration tests
 - `infra/`: Terraform (to be added in Phase 1)
 - `logs/`: runtime logs (gitignored)
@@ -23,14 +23,18 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 - Cognito issues the JWTs that the API checks.
 
 ## Test Files
-- UnitTests: `src/tests/*.test.js` (Node's built-in runner; logic and fake data) — run with: `npm test`
-- IntegrationTests: `src/tests/e2e/` — run with: `npx playwright test` (not yet set up)
+- UnitTests: `src/tests/unit/*.test.js` (Vitest; logic and fake data for `src/app`) — run with: `npm test`; type check with `npm run typecheck`
+- Prototype build test: `src/tests/build.test.mjs` — run with: `npm run test:prototype`
+- IntegrationTests: `src/tests/e2e/` — run with: `npm run e2e` (set `CHROMIUM_PATH` if the browser is not Playwright's own)
 
 ## Progress
 - [x] Planning and architecture docs
 - [x] Repo scaffold
 - [x] Phase 0 prototype (Artifact published; waiting on iPhone feedback)
-- [ ] Phase 1 Books MVP
+- [ ] Phase 1 Books MVP (plan: docs/PHASE-1.md)
+  - [x] M1a: prototype running locally as a Vite app with a Playwright smoke test
+  - [x] M1b: TSX/TS conversion, Vitest port of unit tests, PWA manifest and icons, bundled fonts
+  - [ ] M1c: tighten types (`noImplicitAny`, then `strict`), iPhone check of the installed PWA, split the large embedded image assets out of the JS bundle
 - [ ] Phase 2 Stats
 - [ ] Phase 3 Three.js comparison
 - [ ] Phase 4 Movies & TV

@@ -25,7 +25,8 @@
 - [ ] Later: also keep spine pictures in S3 so a new device (or a sibling's phone) skips drawing
 - [ ] Art upgrade: AI-generated or free carved-wood textures and ornaments to replace the CSS/SVG drawing
 - [ ] Real spine fonts check on device (fonts load from Google Fonts)
-- [ ] Phase 1: Vite + React + TS + PWA scaffold, Vitest, Playwright
+- [x] Phase 1 M1a/M1b (plan in docs/PHASE-1.md): Vite + React + TS + PWA scaffold, port the prototype, Vitest, Playwright smoke test
+- [ ] M1c: tighten types, check the installed PWA on the iPhone, move embedded images to files
 - [ ] Terraform: S3/CloudFront/ACM, Cognito, API Gateway, Lambda, DynamoDB, SSM
 - [ ] Cloudflare subdomain + ACM DNS validation
 - [ ] Metadata proxy Lambda (Hardcover → Google Books → Open Library)

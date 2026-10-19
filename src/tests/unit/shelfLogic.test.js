@@ -1,10 +1,11 @@
 /**
- * Unit tests for src/prototype/shelfLogic.js (pure logic: spines, sorting, packing, rooms).
+ * Unit tests for src/app/shelfLogic.js (pure logic: spines, sorting, packing, rooms).
  * Run with: npm test
  */
-const test = require('node:test');
-const assert = require('node:assert/strict');
-const SL = require('../prototype/shelfLogic');
+import { test } from 'vitest';
+import assert from 'node:assert/strict';
+import { ShelfLogic as SL } from '../../app/shelfLogic';
+import { FakeData } from '../../app/fakeData';
 
 /** Builds a minimal book for tests. */
 function book(overrides) {
@@ -271,7 +272,7 @@ test('buildSeriesStyles clamps tiny spines to the minimum and ignores unnumbered
 });
 
 test('every volume of every series in the example library fits its sticker', () => {
-  const { buildFakeLibrary } = require('../prototype/fakeData');
+  const { buildFakeLibrary } = FakeData;
   const books = buildFakeLibrary('2026-10-19');
   const styles = SL.buildSeriesStyles(books);
   for (const b of books.filter((x) => x.series)) {
