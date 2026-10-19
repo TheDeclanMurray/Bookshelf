@@ -23,11 +23,12 @@ function prefersReducedMotion() {
 
 /**
  * CSS transform text for a book pose. Always the same functions in the same order.
- * @param {{x: number, y: number, scale: number, rotateX: number, rotateY: number}} pose - Position (px), scale, turns (degrees)
+ * Uses scale3d, not scale: plain scale() leaves depth unscaled, which would make a shrunken book look too deep.
+ * @param {{x: number, y: number, scale: number, rotateX: number, rotateY: number, rotateZ?: number}} pose - Position (px), scale, turns (degrees)
  * @returns {string} transform value
  */
 function poseTransform(pose) {
-  return `translate3d(${pose.x}px, ${pose.y}px, 0px) scale(${pose.scale}) rotateX(${pose.rotateX}deg) rotateY(${pose.rotateY}deg)`;
+  return `translate3d(${pose.x}px, ${pose.y}px, 0px) scale3d(${pose.scale}, ${pose.scale}, ${pose.scale}) rotateZ(${pose.rotateZ || 0}deg) rotateX(${pose.rotateX}deg) rotateY(${pose.rotateY}deg)`;
 }
 
 /**

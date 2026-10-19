@@ -140,7 +140,7 @@ button { font: inherit; color: inherit; }
 .floor-shadow { position: absolute; left: -170px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65), rgba(0,0,0,0) 66%); }
 .rest-book { position: absolute; transform-style: preserve-3d; transform-origin: 50% 100%; transition: opacity 0.14s; }
 .rest-book.is-out { opacity: 0; pointer-events: none; }
-.rest-book .tap-ring { position: absolute; inset: 4px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out infinite; pointer-events: none; }
+.rest-book .tap-ring { position: absolute; inset: 4px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out 3;   /* three pulses, then rest: an endless animation keeps the page producing frames */ pointer-events: none; }
 @keyframes tapPulse { 0% { opacity: .0; transform: scale(.97); } 25% { opacity: .75; } 100% { opacity: 0; transform: scale(1.07); } }
 .reading-info { position: absolute; left: 24px; right: 24px; top: 560px; text-align: center; }
 .reading-title { font: 700 21px/1.2 var(--font-display); color: #f3ead7; letter-spacing: 0.04em; text-wrap: balance; }
@@ -149,10 +149,11 @@ button { font: inherit; color: inherit; }
 .reading-empty { position: absolute; left: 30px; right: 30px; top: 300px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
 
 /* ------------------------------------------------------------------- stage */
-.stage { position: fixed; inset: 0; z-index: 50; perspective: 1300px; perspective-origin: 50% 46%; touch-action: none; }
+.stage { position: fixed; inset: 0; z-index: 50; touch-action: none; }   /* perspective is set from bookStage.js */
 .stage-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, rgba(30,18,10,.72), rgba(6,3,2,.93)); opacity: 0; transition: opacity 0.3s ease-out; }
 .stage-dim.is-on { opacity: 1; }
-.stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
+.stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; transform-style: preserve-3d; }   /* preserve-3d lets the book receive the stage's perspective */
+.corner { position: absolute; width: 0; height: 0; pointer-events: none; }
 .book3d { position: absolute; transform-style: preserve-3d; will-change: transform; }   /* never opacity: that would flatten the 3D book */
 .book-lift { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
 .hinge { position: absolute; inset: 0; transform-origin: 0% 50%; transform-style: preserve-3d; will-change: transform; }
@@ -609,6 +610,18 @@ const ShelfLogic = (function () {
     return rooms;
   }
 
+  /**
+   * A short text that changes only when what a room shows changes (its books, their order, its sort).
+   * Used to reuse the same room object between renders so unchanged bookcases are not redrawn.
+   * @param {Object} room - A room from buildRooms
+   * @returns {string} Signature
+   */
+  function roomSignature(room) {
+    if (room.kind === 'reading') return `reading:${room.book ? room.book.id : ''}`;
+    const layout = room.shelves.map((shelf) => shelf.map((placed) => placed.book.id).join(',')).join('/');
+    return `${room.id}|${room.sortMode}|${room.bookCount}|${room.title}|${layout}`;
+  }
+
   // -------------------------------------------------------------------- book facts
   /**
    * Looks up the genre record for a book.
@@ -712,7 +725,7 @@ const ShelfLogic = (function () {
     // functions
     hashString, seededRandom, spineThickness, spineHeight, hslToRgb, relativeLuminance,
     readableTextColor, spinePalette, titleSortKey, authorSortKey, compareLibraryOrder, sortBooks,
-    nextSortMode, packIntoCases, toRoman, caseTitle, groupBooks, buildRooms, genreOf, seriesLabel,
+    nextSortMode, packIntoCases, toRoman, caseTitle, groupBooks, buildRooms, roomSignature, genreOf, seriesLabel,
     daysBetween, formatShortDate, todayIso, clamp, buildSeriesStyles,
   };
 })();
@@ -1420,6 +1433,138 @@ function StatsPage({ book, allBooks, today }) {
 }
 
 /**
+ * poseSolver.js
+ * Finds the stage pose (position, scale, turn) that makes the 3D book's face land exactly on
+ * the on-screen quad of the real spine or stand book, so the handoff between the shelf and the
+ * stage has no jump. It projects the face's four corners through the same transforms the browser
+ * uses (move, scale, turn X, turn Y, then perspective) and adjusts the pose until they match
+ * (Levenberg-Marquardt least squares). Pure math, no DOM: unit tested in src/tests/.
+ */
+const PoseSolver = (function () {
+  'use strict';
+
+  // ----------------------------------------------------------------- constants
+  const STEPS = { x: 0.25, y: 0.25, scale: 0.0005, rotateX: 0.02, rotateY: 0.02, rotateZ: 0.02 };   // finite-difference steps per parameter
+  const MAX_ITERATIONS = 80;
+  const DONE_RMS_PX = 0.02;                               // stop when corners are within this many pixels on average
+  const START_DAMPING = 0.01;
+
+  /**
+   * Degrees to radians.
+   * @param {number} degrees - Angle in degrees
+   * @returns {number} Angle in radians
+   */
+  function toRadians(degrees) {
+    return (degrees * Math.PI) / 180;
+  }
+
+  /**
+   * Where one 3D point lands on screen, relative to the perspective origin. Mirrors the CSS
+   * transform `translate3d(x, y, 0) scale3d(s, s, s) rotateZ(rz) rotateX(rx) rotateY(ry)` inside a parent with `perspective: P`.
+   * @param {number[]} point - [x, y, z] relative to the book's center (y points down, z toward the viewer)
+   * @param {{x: number, y: number, scale: number, rotateX: number, rotateY: number, rotateZ?: number}} pose - Pose in px, scale, degrees (rotateZ defaults to 0)
+   * @param {number} perspective - CSS perspective distance in px
+   * @returns {number[]} [screenX, screenY]
+   */
+  function projectPoint(point, pose, perspective) {
+    const [px, py, pz] = point;
+    const cy = Math.cos(toRadians(pose.rotateY)), sy = Math.sin(toRadians(pose.rotateY));
+    const cx = Math.cos(toRadians(pose.rotateX)), sx = Math.sin(toRadians(pose.rotateX));
+    const x1 = px * cy + pz * sy;                         // turn about Y first (it is the right-most function)
+    const z1 = -px * sy + pz * cy;
+    const y2 = py * cx - z1 * sx;                         // then about X
+    const z2 = py * sx + z1 * cx;
+    const rz = toRadians(pose.rotateZ || 0);              // then roll about Z (the screen's depth axis)
+    const x3 = x1 * Math.cos(rz) - y2 * Math.sin(rz);
+    const y3 = x1 * Math.sin(rz) + y2 * Math.cos(rz);
+    const x = x3 * pose.scale + pose.x;                   // then scale (all three axes), then move (z is not moved)
+    const y = y3 * pose.scale + pose.y;
+    const z = z2 * pose.scale;
+    const k = perspective / (perspective - z);            // things closer to the viewer look bigger
+    return [x * k, y * k];
+  }
+
+  /**
+   * Projects several points.
+   * @param {number[][]} corners - [x, y, z] points
+   * @param {Object} pose - See projectPoint
+   * @param {number} perspective - CSS perspective distance in px
+   * @returns {number[]} Flat list [x0, y0, x1, y1, ...]
+   */
+  function projectCorners(corners, pose, perspective) {
+    return corners.flatMap((corner) => projectPoint(corner, pose, perspective));
+  }
+
+  /**
+   * Solves a small linear system by Gaussian elimination with pivoting.
+   * @param {number[][]} matrix - n by n
+   * @param {number[]} vector - length n
+   * @returns {(number[]|null)} Solution, or null if the matrix is singular
+   */
+  function solveLinear(matrix, vector) {
+    const n = vector.length;
+    const a = matrix.map((row, i) => row.concat(vector[i]));   // augmented matrix
+    for (let col = 0; col < n; col++) {
+      let pivot = col;                                    // pick the largest entry in this column
+      for (let row = col + 1; row < n; row++) if (Math.abs(a[row][col]) > Math.abs(a[pivot][col])) pivot = row;
+      if (Math.abs(a[pivot][col]) < 1e-12) return null;
+      [a[col], a[pivot]] = [a[pivot], a[col]];
+      for (let row = col + 1; row < n; row++) {
+        const factor = a[row][col] / a[col][col];
+        for (let k = col; k <= n; k++) a[row][k] -= factor * a[col][k];
+      }
+    }
+    const solution = new Array(n).fill(0);
+    for (let row = n - 1; row >= 0; row--) {              // back substitution
+      let sum = a[row][n];
+      for (let k = row + 1; k < n; k++) sum -= a[row][k] * solution[k];
+      solution[row] = sum / a[row][row];
+    }
+    return solution;
+  }
+
+  /**
+   * Finds the pose whose projected corners best match the targets.
+   * @param {{corners: number[][], targets: number[], initial: Object, free: string[], perspective: number}} input
+   *   corners are the face's [x, y, z] corners; targets are the wanted screen positions as a flat list
+   *   relative to the perspective origin; initial is the starting pose; free names the pose fields allowed to change
+   * @returns {{pose: Object, rms: number}} Best pose and the average corner error in px
+   * @throws {RangeError} If targets do not match the corners, or no field is free
+   */
+  function solvePose({ corners, targets, initial, free, perspective }) {
+    if (targets.length !== corners.length * 2 || free.length === 0) {
+      throw new RangeError('need two target numbers per corner and at least one free parameter');
+    }
+    const errorOf = (pose) => projectCorners(corners, pose, perspective).map((value, i) => value - targets[i]);
+    const rmsOf = (residual) => Math.sqrt(residual.reduce((sum, r) => sum + r * r, 0) / residual.length);
+    let pose = { ...initial };
+    let residual = errorOf(pose);
+    let damping = START_DAMPING;
+    for (let iteration = 0; iteration < MAX_ITERATIONS && rmsOf(residual) > DONE_RMS_PX; iteration++) {
+      // Jacobian by finite differences: how each corner coordinate responds to each free field
+      const columns = free.map((key) => errorOf({ ...pose, [key]: pose[key] + STEPS[key] }).map((value, i) => (value - residual[i]) / STEPS[key]));
+      const jtj = free.map((_, i) => free.map((__, j) => columns[i].reduce((sum, v, k) => sum + v * columns[j][k], 0)));
+      const jtr = free.map((_, i) => columns[i].reduce((sum, v, k) => sum + v * residual[k], 0));
+      const damped = jtj.map((row, i) => row.map((v, j) => (i === j ? v * (1 + damping) + 1e-9 : v)));
+      const step = solveLinear(damped, jtr.map((v) => -v));
+      if (!step) { damping *= 10; continue; }
+      const candidate = { ...pose };
+      free.forEach((key, i) => { candidate[key] = pose[key] + step[i]; });
+      const candidateResidual = errorOf(candidate);
+      if (rmsOf(candidateResidual) < rmsOf(residual)) { pose = candidate; residual = candidateResidual; damping = Math.max(1e-6, damping / 3); }
+      else damping *= 5;                                  // worse: take a smaller, safer step next time
+    }
+    return { pose, rms: rmsOf(residual) };
+  }
+
+  return { projectPoint, projectCorners, solvePose };
+})();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = PoseSolver;                            // Node (tests)
+}
+
+/**
  * stageMotion.js
  * Small helpers that play the book's movements with the Web Animations API. Unlike
  * per-frame JavaScript animation, transform and opacity animations run on the browser's
@@ -1444,11 +1589,12 @@ function prefersReducedMotion() {
 
 /**
  * CSS transform text for a book pose. Always the same functions in the same order.
- * @param {{x: number, y: number, scale: number, rotateX: number, rotateY: number}} pose - Position (px), scale, turns (degrees)
+ * Uses scale3d, not scale: plain scale() leaves depth unscaled, which would make a shrunken book look too deep.
+ * @param {{x: number, y: number, scale: number, rotateX: number, rotateY: number, rotateZ?: number}} pose - Position (px), scale, turns (degrees)
  * @returns {string} transform value
  */
 function poseTransform(pose) {
-  return `translate3d(${pose.x}px, ${pose.y}px, 0px) scale(${pose.scale}) rotateX(${pose.rotateX}deg) rotateY(${pose.rotateY}deg)`;
+  return `translate3d(${pose.x}px, ${pose.y}px, 0px) scale3d(${pose.scale}, ${pose.scale}, ${pose.scale}) rotateZ(${pose.rotateZ || 0}deg) rotateX(${pose.rotateX}deg) rotateY(${pose.rotateY}deg)`;
 }
 
 /**
@@ -1519,20 +1665,20 @@ function playMotionTo(element, to, { from, ...timing }) {
 const PAGE_FONT_RATIO = 0.068;                            // page text size as a fraction of the book width
 
 /**
- * The faces of one book.
+ * The faces of one book. Memoized: the stage's hint text changing does not redraw the whole book.
  * @param {{book: Object, allBooks: Object[], today: string, W: number, H: number, D: number,
  *   hingeRef: Object, onCoverClick: function, withPages: boolean, coverExtras: *}} props
  *   W, H, D are width, height and thickness in px; spineUnit is px per spine design unit (omit to derive from H); withPages draws the printed pages
  *   (the stand does not need them); hingeRef receives the element that swings the cover (turn it with rotateY, 0 to -180 degrees); coverExtras is drawn on the front cover (e.g. a tap hint)
  * @returns {React.ReactElement} Fragment of positioned faces
  */
-function BookBox({ book, allBooks, today, W, H, D, spineUnit, hingeRef, onCoverClick, withPages, coverExtras }) {
+const BookBox = memo(function BookBox({ book, allBooks, today, W, H, D, spineUnit, hingeRef, onCoverClick, withPages, coverExtras }) {
   const faceBox = { left: 0, top: 0, width: W, height: H };
   const pageFontSize = W * PAGE_FONT_RATIO;               // page text scales with the book
   return html`<${React.Fragment}>
     <div className="face page-edge" style=${{ ...faceBox, transform: `translateZ(${-D / 2}px) rotateY(180deg)`, background: '#2a1a10' }}>
       <${CoverArt} book=${book} width=${W} height=${H} /></div>
-    <div className="face" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${-W / 2}px) rotateY(-90deg)` }}>
+    <div className="face" data-face="spine" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${-W / 2}px) rotateY(-90deg)` }}>
       <${SpineArt} book=${book} width=${D} height=${H} unit=${spineUnit || H / SL.SPINE_BASE_HEIGHT_PX} /></div>
     <div className="face page-edge" style=${{ left: (W - D) / 2, top: 0, width: D, height: H, transform: `translateX(${W / 2}px) rotateY(90deg)` }} />
     <div className="face page-edge h" style=${{ left: 0, top: (H - D) / 2, width: W, height: D, transform: `translateY(${-H / 2}px) rotateX(90deg)` }} />
@@ -1541,13 +1687,12 @@ function BookBox({ book, allBooks, today, W, H, D, spineUnit, hingeRef, onCoverC
       <${StatsPage} book=${book} allBooks=${allBooks} today=${today} /></div>`}
     <div style=${{ ...faceBox, position: 'absolute', transformStyle: 'preserve-3d', transform: `translateZ(${D / 2}px)` }}>
       <div ref=${hingeRef} className="hinge">
-        <div className="face cover-face" style=${faceBox} onClick=${onCoverClick} onPointerDown=${noteTapStart}>
+        <div className="face cover-face" data-face="cover" style=${faceBox} onClick=${onCoverClick} onPointerDown=${noteTapStart}>
           <${CoverArt} book=${book} width=${W} height=${H} /><div className="cover-sheen" /><div className="cover-crease" />${coverExtras}</div>
         ${withPages && html`<div className="face" style=${{ ...faceBox, transform: 'rotateY(180deg)', fontSize: pageFontSize }}><${SummaryPage} book=${book} /></div>`}
       </div>
     </div>
-  <//>`;
-}
+  <//>`;});
 
 /**
  * stand3d.js
@@ -1577,6 +1722,9 @@ const BOOK_REST_DEG = 55;                                 // book leans back thi
 const WEDGE_W = 132;
 const WEDGE_DEPTH = 124;
 const WEDGE_BACK_H = 86;
+const CORNER_MARKERS = html`<${React.Fragment}><span className="tap-ring" />
+  <span className="corner" style=${{ left: 0, top: 0 }} /><span className="corner" style=${{ left: '100%', top: 0 }} />
+  <span className="corner" style=${{ left: '100%', top: '100%' }} /><span className="corner" style=${{ left: 0, top: '100%' }} /><//>`;   // zero-size points whose on-screen positions tell the stage exactly where the cover is
 const FLOOR_Y = 234;                                      // bottom of the base, in stand coordinates
 
 /**
@@ -1724,7 +1872,7 @@ const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick }) {
     ${book && html`<div className="rest-book" data-book-id=${book.id} style=${{ left: -W / 2, top: -H, width: W, height: H,
       transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
       <${BookBox} book=${book} W=${W} H=${H} D=${D} withPages=${false}
-        onCoverClick=${onBookClick} coverExtras=${html`<span className="tap-ring" />`} />
+        onCoverClick=${onBookClick} coverExtras=${CORNER_MARKERS} />
     </div>`}
   </div>`;});
 
@@ -1781,6 +1929,8 @@ const ReadingRoom = memo(function ReadingRoom({ room, onPickReading, today }) {
 
 // ----------------------------------------------------------------- constants
 const STAGE_ANCHOR_Y = 0.46;                              // vertical anchor of the stage, as a fraction of screen height
+const STAGE_PERSPECTIVE_PX = 1300;                        // how strongly the 3D book converges; the pose solver uses the same number
+const SOLVE_PASSES = 3;                                   // shelf launches refine the book's thickness this many times
 const BOOK_MIN_W = 150;                                   // smallest book width on the stage (px)
 const BOOK_MAX_W = 240;                                   // largest book width on the stage (px)
 const BOOK_ASPECT = 1.5;                                  // book height / width
@@ -1799,14 +1949,57 @@ const COVER_OPEN = 'rotateY(-180deg)';
 const LIFT_FLAT = 'translateZ(0px)';
 
 /**
+ * The four corners (book-center coordinates, y down, z toward the viewer) of the part of the
+ * 3D book that sits on the real object: the spine for a shelf book, the front cover for a stand book.
+ * Listed top-left, top-right, bottom-right, bottom-left as seen on screen.
+ * @param {string} kind - 'shelf' or 'stand'
+ * @param {number} W - Book width
+ * @param {number} H - Book height
+ * @param {number} D - Book thickness
+ * @returns {number[][]} Four [x, y, z] corners
+ */
+function launchFaceCorners(kind, W, H, D) {
+  if (kind === 'shelf') return [[-W / 2, -H / 2, -D / 2], [-W / 2, -H / 2, D / 2], [-W / 2, H / 2, D / 2], [-W / 2, H / 2, -D / 2]];
+  return [[-W / 2, -H / 2, D / 2], [W / 2, -H / 2, D / 2], [W / 2, H / 2, D / 2], [-W / 2, H / 2, D / 2]];
+}
+
+/**
+ * Finds the pose (and thickness) that puts the 3D book exactly over the real spine or stand book,
+ * including the effect of perspective, so nothing jumps when the stage opens or closes.
+ * @param {{launch: Object, W: number, H: number, anchorX: number, anchorY: number}} input
+ *   launch holds the measured screen corners of the real object ({corners, rect, rotateX, rotateY, ...})
+ * @returns {{pose: Object, D: number}} Launch pose for poseTransform() and the book thickness to build with
+ */
+function solveLaunchPose({ launch, W, H, anchorX, anchorY }) {
+  const targets = launch.corners.flatMap(([x, y]) => [x - anchorX, y - anchorY]);   // relative to the perspective origin
+  const isShelf = launch.kind === 'shelf';
+  const solve = (D, initial, free) => PoseSolver.solvePose({ corners: launchFaceCorners(launch.kind, W, H, D), targets, initial, free, perspective: STAGE_PERSPECTIVE_PX });
+  const center = { x: launch.rect.cx - anchorX, y: launch.rect.cy - anchorY };
+  if (!isShelf) {
+    const D = W * launch.depthRatio;                      // same proportions as the book on the stand
+    const initial = { ...center, scale: (launch.designScale * launch.designW) / W, rotateX: launch.rotateX, rotateY: launch.rotateY };
+    return { pose: solve(D, { ...initial, rotateZ: 0 }, ['x', 'y', 'scale', 'rotateX', 'rotateY', 'rotateZ']).pose, D };   // the stand's stacked turns need a roll too
+  }
+  // A spine: height and position fix the scale; its on-screen width then fixes the book's thickness
+  let D = Math.max(16, launch.thicknessPx / (launch.rect.h / H));
+  let pose = { ...center, scale: launch.rect.h / H, rotateX: launch.rotateX, rotateY: launch.rotateY };
+  for (let pass = 0; pass < SOLVE_PASSES; pass++) {
+    pose = solve(D, pose, ['x', 'y', 'scale']).pose;
+    const projected = PoseSolver.projectCorners(launchFaceCorners('shelf', W, H, D), pose, STAGE_PERSPECTIVE_PX);
+    D = Math.max(16, D * (targets[2] - targets[0]) / (projected[2] - projected[0]));
+  }
+  return { pose: solve(D, pose, ['x', 'y', 'scale']).pose, D };
+}
+
+/**
  * The three resting poses of the book on the stage.
- * @param {Object} geo - {launch, W, anchorX, anchorY, scale0, openScale, displayScale}
+ * @param {Object} geo - {launchPose, W, openScale, displayScale}
  * @returns {{launch: Object, display: Object, open: Object}} Poses for poseTransform()
  */
 function buildPoses(geo) {
-  const { launch, W, anchorX, anchorY, scale0, openScale, displayScale } = geo;
+  const { launchPose, W, openScale, displayScale } = geo;
   return {
-    launch: { x: launch.rect.cx - anchorX, y: launch.rect.cy - anchorY, scale: scale0, rotateX: launch.rotateX, rotateY: launch.rotateY },
+    launch: launchPose,
     display: { x: 0, y: 0, scale: displayScale, rotateX: DISPLAY_TILT_X, rotateY: DISPLAY_TILT_Y },
     open: { x: (openScale * W) / 2, y: 0, scale: openScale, rotateX: 0, rotateY: 0 },
   };
@@ -1831,16 +2024,16 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   const hingeRef = useRef(null);                          // swings the front cover
   const dimRef = useRef(null);
 
-  // Book size on the stage, depth from the real spine width, and the display scales
+  // Book size on the stage; the launch pose and thickness are solved so the book lands exactly on the real object
   const W = SL.clamp((vp.w - 24) / 2, BOOK_MIN_W, BOOK_MAX_W);
   const H = Math.round(W * BOOK_ASPECT);
-  // Size at the start: a spine is as tall as the book; from the stand, match the book's real on-screen scale
-  const scale0 = isShelf ? launch.rect.h / H : (launch.designScale * launch.designW) / W;
-  const D = Math.max(16, launch.thicknessPx / scale0);
+  const anchorX = vp.w / 2;
+  const anchorY = vp.h * STAGE_ANCHOR_Y;
+  const { pose: launchPose, D } = useMemo(() => solveLaunchPose({ launch, W, H, anchorX, anchorY }), [launch, W, H, anchorX, anchorY]);
+  const scale0 = launch.rect.h / H;                       // nominal size at the start, used for the spine's decoration scale
   const displayScale = Math.min(1.45, (vp.w - 48) / (W + D * 0.5), (vp.h * 0.6) / H);
   const openScale = Math.min(1.25, (vp.w - 16) / (2 * W), (vp.h * 0.8) / H);
-  const poses = useMemo(() => buildPoses({ launch, W, anchorX: vp.w / 2, anchorY: vp.h * STAGE_ANCHOR_Y, scale0, openScale, displayScale }),
-    [launch, W, vp.w, vp.h, scale0, openScale, displayScale]);
+  const poses = useMemo(() => buildPoses({ launchPose, W, openScale, displayScale }), [launchPose, W, openScale, displayScale]);
   const launchT = poseTransform(poses.launch);
   const displayT = poseTransform(poses.display);
   const openT = poseTransform(poses.open);
@@ -1893,7 +2086,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   };
 
   /** Opens the cover and recenters the book so both pages are in view. */
-  const openCover = (event) => {
+  const openCover = useCallback((event) => {
     event.stopPropagation();
     if (phaseRef.current !== 'display') return;
     phaseRef.current = 'opening';
@@ -1904,9 +2097,9 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     ]).then(([swung]) => {
       if (swung && phaseRef.current === 'opening') { phaseRef.current = 'open'; setHint(HINT_CLOSE); }
     });
-  };
+  }, [displayT, openT]);
 
-  return html`<div className="stage" onClick=${requestClose}>
+  return html`<div className="stage" style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: `${anchorX}px ${anchorY}px` }} onClick=${requestClose}>
     <div className="stage-dim" ref=${dimRef} />
     <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
     <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>
@@ -2021,11 +2214,16 @@ function Pager({ rooms, index, onIndex, showHint }) {
  * @param {string} kind - 'shelf' or 'stand'
  * @param {Element} element - The tapped spine or cover
  * @param {Object} extras - {rotateX, rotateY, thicknessPx} for this kind of launch
- * @returns {{kind: string, rect: {cx: number, cy: number, w: number, h: number}, rotateX: number, rotateY: number, thicknessPx: number}}
+ * @returns {{kind: string, corners: number[][], rect: {cx: number, cy: number, w: number, h: number}}} Measured screen corners (top-left, top-right, bottom-right, bottom-left) plus the extras
  */
 function launchFromElement(kind, element, extras) {
   const box = element.getBoundingClientRect();
-  return { kind, rect: { cx: box.left + box.width / 2, cy: box.top + box.height / 2, w: box.width, h: box.height }, ...extras };
+  // A stand book has four marker points on its cover; a spine is a flat rectangle, so its own corners are used
+  const markers = Array.from(element.querySelectorAll('.corner'));
+  const corners = markers.length === 4
+    ? markers.map((marker) => { const point = marker.getBoundingClientRect(); return [point.left, point.top]; })
+    : [[box.left, box.top], [box.right, box.top], [box.right, box.bottom], [box.left, box.bottom]];
+  return { kind, corners, rect: { cx: box.left + box.width / 2, cy: box.top + box.height / 2, w: box.width, h: box.height }, ...extras };
 }
 
 /**
@@ -2047,7 +2245,14 @@ function App() {
   const today = useMemo(() => SL.todayIso(), []);
   const books = useMemo(() => FakeData.buildFakeLibrary(today), [today]);
   const [sortModes, setSortModes] = useState({});         // sort mode per group key
-  const rooms = useMemo(() => SL.buildRooms(books, { sortModes }), [books, sortModes]);
+  const roomCache = useRef(new Map());                 // room id -> {signature, room}: unchanged rooms keep the same object, so their bookcases are not redrawn
+  const rooms = useMemo(() => SL.buildRooms(books, { sortModes }).map((room) => {
+    const signature = SL.roomSignature(room);
+    const cached = roomCache.current.get(room.id);
+    if (cached && cached.signature === signature) return cached.room;
+    roomCache.current.set(room.id, { signature, room });
+    return room;
+  }), [books, sortModes]);
   const readingAt = rooms.findIndex((r) => r.kind === 'reading');
   const [index, setIndex] = useState(readingAt);           // start on Currently Reading
   const [picked, setPicked] = useState(null);              // {book, launch} while the stage is open
@@ -2066,10 +2271,12 @@ function App() {
     const box = element.getBoundingClientRect();
     const turn = Math.cos((STAND_TURN_Y_DEG * Math.PI) / 180);
     const onScreenScale = box.width / (READING_BOOK_W * turn);   // how big the book is on screen compared with its design size
-    setSceneBookHidden(book.id, true);
-    setPicked({ book, launch: launchFromElement('stand', element, {
+    // Measure first and hide second: fading a 3D element flattens it, which would move the points being measured
+    const launch = launchFromElement('stand', element, {
       rotateX: BOOK_REST_DEG + STAND_TILT_X_DEG, rotateY: STAND_TURN_Y_DEG, thicknessPx: READING_BOOK_D * onScreenScale,
-      designScale: onScreenScale, designW: READING_BOOK_W }) });
+      designScale: onScreenScale, designW: READING_BOOK_W, depthRatio: READING_BOOK_D / READING_BOOK_W });
+    setSceneBookHidden(book.id, true);
+    setPicked({ book, launch });
   }, []);
   const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 

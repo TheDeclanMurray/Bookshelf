@@ -98,11 +98,16 @@ function Pager({ rooms, index, onIndex, showHint }) {
  * @param {string} kind - 'shelf' or 'stand'
  * @param {Element} element - The tapped spine or cover
  * @param {Object} extras - {rotateX, rotateY, thicknessPx} for this kind of launch
- * @returns {{kind: string, rect: {cx: number, cy: number, w: number, h: number}, rotateX: number, rotateY: number, thicknessPx: number}}
+ * @returns {{kind: string, corners: number[][], rect: {cx: number, cy: number, w: number, h: number}}} Measured screen corners (top-left, top-right, bottom-right, bottom-left) plus the extras
  */
 function launchFromElement(kind, element, extras) {
   const box = element.getBoundingClientRect();
-  return { kind, rect: { cx: box.left + box.width / 2, cy: box.top + box.height / 2, w: box.width, h: box.height }, ...extras };
+  // A stand book has four marker points on its cover; a spine is a flat rectangle, so its own corners are used
+  const markers = Array.from(element.querySelectorAll('.corner'));
+  const corners = markers.length === 4
+    ? markers.map((marker) => { const point = marker.getBoundingClientRect(); return [point.left, point.top]; })
+    : [[box.left, box.top], [box.right, box.top], [box.right, box.bottom], [box.left, box.bottom]];
+  return { kind, corners, rect: { cx: box.left + box.width / 2, cy: box.top + box.height / 2, w: box.width, h: box.height }, ...extras };
 }
 
 /**
@@ -124,7 +129,14 @@ function App() {
   const today = useMemo(() => SL.todayIso(), []);
   const books = useMemo(() => FakeData.buildFakeLibrary(today), [today]);
   const [sortModes, setSortModes] = useState({});         // sort mode per group key
-  const rooms = useMemo(() => SL.buildRooms(books, { sortModes }), [books, sortModes]);
+  const roomCache = useRef(new Map());                 // room id -> {signature, room}: unchanged rooms keep the same object, so their bookcases are not redrawn
+  const rooms = useMemo(() => SL.buildRooms(books, { sortModes }).map((room) => {
+    const signature = SL.roomSignature(room);
+    const cached = roomCache.current.get(room.id);
+    if (cached && cached.signature === signature) return cached.room;
+    roomCache.current.set(room.id, { signature, room });
+    return room;
+  }), [books, sortModes]);
   const readingAt = rooms.findIndex((r) => r.kind === 'reading');
   const [index, setIndex] = useState(readingAt);           // start on Currently Reading
   const [picked, setPicked] = useState(null);              // {book, launch} while the stage is open
@@ -143,10 +155,12 @@ function App() {
     const box = element.getBoundingClientRect();
     const turn = Math.cos((STAND_TURN_Y_DEG * Math.PI) / 180);
     const onScreenScale = box.width / (READING_BOOK_W * turn);   // how big the book is on screen compared with its design size
-    setSceneBookHidden(book.id, true);
-    setPicked({ book, launch: launchFromElement('stand', element, {
+    // Measure first and hide second: fading a 3D element flattens it, which would move the points being measured
+    const launch = launchFromElement('stand', element, {
       rotateX: BOOK_REST_DEG + STAND_TILT_X_DEG, rotateY: STAND_TURN_Y_DEG, thicknessPx: READING_BOOK_D * onScreenScale,
-      designScale: onScreenScale, designW: READING_BOOK_W }) });
+      designScale: onScreenScale, designW: READING_BOOK_W, depthRatio: READING_BOOK_D / READING_BOOK_W });
+    setSceneBookHidden(book.id, true);
+    setPicked({ book, launch });
   }, []);
   const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 

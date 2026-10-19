@@ -13,7 +13,8 @@
   - [x] Per-bookcase sort order (button on the plaque)
   - [x] Round 3 feedback: slightly slower pull-out, close cover before putting back, 3D marble column stand
   - [x] Round 4 feedback: smoother pick-up and put-back (Web Animations, no re-render on pick)
-  - [ ] **Try round 4 on the iPhone and report what feels off** (pick-up and put-back smoothness on the real phone, stand speed)
+  - [x] Round 5: fix put-back landing in the wrong place, fewer redraws (docs/RENDERING.md)
+  - [ ] **Try round 5 on the iPhone and report what feels off** (put-back landing exactly in place, smoothness, stand speed)
   - [x] Decide: stand or desk (stand, now marble)
   - [ ] Decide: keep CSS 3D, or schedule the Three.js test earlier
 

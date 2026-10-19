@@ -135,7 +135,7 @@ button { font: inherit; color: inherit; }
 .floor-shadow { position: absolute; left: -170px; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(0,0,0,.65), rgba(0,0,0,0) 66%); }
 .rest-book { position: absolute; transform-style: preserve-3d; transform-origin: 50% 100%; transition: opacity 0.14s; }
 .rest-book.is-out { opacity: 0; pointer-events: none; }
-.rest-book .tap-ring { position: absolute; inset: 4px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out infinite; pointer-events: none; }
+.rest-book .tap-ring { position: absolute; inset: 4px; border-radius: 4px; border: 1px solid var(--brass); opacity: 0; animation: tapPulse 2.6s ease-out 3;   /* three pulses, then rest: an endless animation keeps the page producing frames */ pointer-events: none; }
 @keyframes tapPulse { 0% { opacity: .0; transform: scale(.97); } 25% { opacity: .75; } 100% { opacity: 0; transform: scale(1.07); } }
 .reading-info { position: absolute; left: 24px; right: 24px; top: 560px; text-align: center; }
 .reading-title { font: 700 21px/1.2 var(--font-display); color: #f3ead7; letter-spacing: 0.04em; text-wrap: balance; }
@@ -144,10 +144,11 @@ button { font: inherit; color: inherit; }
 .reading-empty { position: absolute; left: 30px; right: 30px; top: 300px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
 
 /* ------------------------------------------------------------------- stage */
-.stage { position: fixed; inset: 0; z-index: 50; perspective: 1300px; perspective-origin: 50% 46%; touch-action: none; }
+.stage { position: fixed; inset: 0; z-index: 50; touch-action: none; }   /* perspective is set from bookStage.js */
 .stage-dim { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 46%, rgba(30,18,10,.72), rgba(6,3,2,.93)); opacity: 0; transition: opacity 0.3s ease-out; }
 .stage-dim.is-on { opacity: 1; }
-.stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; }
+.stage-anchor { position: absolute; left: 50%; top: 46%; width: 0; height: 0; transform-style: preserve-3d; }   /* preserve-3d lets the book receive the stage's perspective */
+.corner { position: absolute; width: 0; height: 0; pointer-events: none; }
 .book3d { position: absolute; transform-style: preserve-3d; will-change: transform; }   /* never opacity: that would flatten the 3D book */
 .book-lift { position: absolute; inset: 0; transform-style: preserve-3d; will-change: transform; }
 .hinge { position: absolute; inset: 0; transform-origin: 0% 50%; transform-style: preserve-3d; will-change: transform; }

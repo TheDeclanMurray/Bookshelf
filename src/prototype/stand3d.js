@@ -26,6 +26,9 @@ const BOOK_REST_DEG = 55;                                 // book leans back thi
 const WEDGE_W = 132;
 const WEDGE_DEPTH = 124;
 const WEDGE_BACK_H = 86;
+const CORNER_MARKERS = html`<${React.Fragment}><span className="tap-ring" />
+  <span className="corner" style=${{ left: 0, top: 0 }} /><span className="corner" style=${{ left: '100%', top: 0 }} />
+  <span className="corner" style=${{ left: '100%', top: '100%' }} /><span className="corner" style=${{ left: 0, top: '100%' }} /><//>`;   // zero-size points whose on-screen positions tell the stage exactly where the cover is
 const FLOOR_Y = 234;                                      // bottom of the base, in stand coordinates
 
 /**
@@ -173,6 +176,6 @@ const MarbleStand = memo(function MarbleStand({ book, W, H, D, onBookClick }) {
     ${book && html`<div className="rest-book" data-book-id=${book.id} style=${{ left: -W / 2, top: -H, width: W, height: H,
       transform: `translateZ(${BOOK_REST_Z}px) rotateX(${BOOK_REST_DEG}deg) translateZ(${D / 2}px)` }}>
       <${BookBox} book=${book} W=${W} H=${H} D=${D} withPages=${false}
-        onCoverClick=${onBookClick} coverExtras=${html`<span className="tap-ring" />`} />
+        onCoverClick=${onBookClick} coverExtras=${CORNER_MARKERS} />
     </div>`}
   </div>`;});

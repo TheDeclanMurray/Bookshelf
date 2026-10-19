@@ -401,6 +401,18 @@ const ShelfLogic = (function () {
     return rooms;
   }
 
+  /**
+   * A short text that changes only when what a room shows changes (its books, their order, its sort).
+   * Used to reuse the same room object between renders so unchanged bookcases are not redrawn.
+   * @param {Object} room - A room from buildRooms
+   * @returns {string} Signature
+   */
+  function roomSignature(room) {
+    if (room.kind === 'reading') return `reading:${room.book ? room.book.id : ''}`;
+    const layout = room.shelves.map((shelf) => shelf.map((placed) => placed.book.id).join(',')).join('/');
+    return `${room.id}|${room.sortMode}|${room.bookCount}|${room.title}|${layout}`;
+  }
+
   // -------------------------------------------------------------------- book facts
   /**
    * Looks up the genre record for a book.
@@ -504,7 +516,7 @@ const ShelfLogic = (function () {
     // functions
     hashString, seededRandom, spineThickness, spineHeight, hslToRgb, relativeLuminance,
     readableTextColor, spinePalette, titleSortKey, authorSortKey, compareLibraryOrder, sortBooks,
-    nextSortMode, packIntoCases, toRoman, caseTitle, groupBooks, buildRooms, genreOf, seriesLabel,
+    nextSortMode, packIntoCases, toRoman, caseTitle, groupBooks, buildRooms, roomSignature, genreOf, seriesLabel,
     daysBetween, formatShortDate, todayIso, clamp, buildSeriesStyles,
   };
 })();

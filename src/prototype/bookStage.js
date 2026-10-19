@@ -9,6 +9,8 @@
 
 // ----------------------------------------------------------------- constants
 const STAGE_ANCHOR_Y = 0.46;                              // vertical anchor of the stage, as a fraction of screen height
+const STAGE_PERSPECTIVE_PX = 1300;                        // how strongly the 3D book converges; the pose solver uses the same number
+const SOLVE_PASSES = 3;                                   // shelf launches refine the book's thickness this many times
 const BOOK_MIN_W = 150;                                   // smallest book width on the stage (px)
 const BOOK_MAX_W = 240;                                   // largest book width on the stage (px)
 const BOOK_ASPECT = 1.5;                                  // book height / width
@@ -27,14 +29,57 @@ const COVER_OPEN = 'rotateY(-180deg)';
 const LIFT_FLAT = 'translateZ(0px)';
 
 /**
+ * The four corners (book-center coordinates, y down, z toward the viewer) of the part of the
+ * 3D book that sits on the real object: the spine for a shelf book, the front cover for a stand book.
+ * Listed top-left, top-right, bottom-right, bottom-left as seen on screen.
+ * @param {string} kind - 'shelf' or 'stand'
+ * @param {number} W - Book width
+ * @param {number} H - Book height
+ * @param {number} D - Book thickness
+ * @returns {number[][]} Four [x, y, z] corners
+ */
+function launchFaceCorners(kind, W, H, D) {
+  if (kind === 'shelf') return [[-W / 2, -H / 2, -D / 2], [-W / 2, -H / 2, D / 2], [-W / 2, H / 2, D / 2], [-W / 2, H / 2, -D / 2]];
+  return [[-W / 2, -H / 2, D / 2], [W / 2, -H / 2, D / 2], [W / 2, H / 2, D / 2], [-W / 2, H / 2, D / 2]];
+}
+
+/**
+ * Finds the pose (and thickness) that puts the 3D book exactly over the real spine or stand book,
+ * including the effect of perspective, so nothing jumps when the stage opens or closes.
+ * @param {{launch: Object, W: number, H: number, anchorX: number, anchorY: number}} input
+ *   launch holds the measured screen corners of the real object ({corners, rect, rotateX, rotateY, ...})
+ * @returns {{pose: Object, D: number}} Launch pose for poseTransform() and the book thickness to build with
+ */
+function solveLaunchPose({ launch, W, H, anchorX, anchorY }) {
+  const targets = launch.corners.flatMap(([x, y]) => [x - anchorX, y - anchorY]);   // relative to the perspective origin
+  const isShelf = launch.kind === 'shelf';
+  const solve = (D, initial, free) => PoseSolver.solvePose({ corners: launchFaceCorners(launch.kind, W, H, D), targets, initial, free, perspective: STAGE_PERSPECTIVE_PX });
+  const center = { x: launch.rect.cx - anchorX, y: launch.rect.cy - anchorY };
+  if (!isShelf) {
+    const D = W * launch.depthRatio;                      // same proportions as the book on the stand
+    const initial = { ...center, scale: (launch.designScale * launch.designW) / W, rotateX: launch.rotateX, rotateY: launch.rotateY };
+    return { pose: solve(D, { ...initial, rotateZ: 0 }, ['x', 'y', 'scale', 'rotateX', 'rotateY', 'rotateZ']).pose, D };   // the stand's stacked turns need a roll too
+  }
+  // A spine: height and position fix the scale; its on-screen width then fixes the book's thickness
+  let D = Math.max(16, launch.thicknessPx / (launch.rect.h / H));
+  let pose = { ...center, scale: launch.rect.h / H, rotateX: launch.rotateX, rotateY: launch.rotateY };
+  for (let pass = 0; pass < SOLVE_PASSES; pass++) {
+    pose = solve(D, pose, ['x', 'y', 'scale']).pose;
+    const projected = PoseSolver.projectCorners(launchFaceCorners('shelf', W, H, D), pose, STAGE_PERSPECTIVE_PX);
+    D = Math.max(16, D * (targets[2] - targets[0]) / (projected[2] - projected[0]));
+  }
+  return { pose: solve(D, pose, ['x', 'y', 'scale']).pose, D };
+}
+
+/**
  * The three resting poses of the book on the stage.
- * @param {Object} geo - {launch, W, anchorX, anchorY, scale0, openScale, displayScale}
+ * @param {Object} geo - {launchPose, W, openScale, displayScale}
  * @returns {{launch: Object, display: Object, open: Object}} Poses for poseTransform()
  */
 function buildPoses(geo) {
-  const { launch, W, anchorX, anchorY, scale0, openScale, displayScale } = geo;
+  const { launchPose, W, openScale, displayScale } = geo;
   return {
-    launch: { x: launch.rect.cx - anchorX, y: launch.rect.cy - anchorY, scale: scale0, rotateX: launch.rotateX, rotateY: launch.rotateY },
+    launch: launchPose,
     display: { x: 0, y: 0, scale: displayScale, rotateX: DISPLAY_TILT_X, rotateY: DISPLAY_TILT_Y },
     open: { x: (openScale * W) / 2, y: 0, scale: openScale, rotateX: 0, rotateY: 0 },
   };
@@ -59,16 +104,16 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   const hingeRef = useRef(null);                          // swings the front cover
   const dimRef = useRef(null);
 
-  // Book size on the stage, depth from the real spine width, and the display scales
+  // Book size on the stage; the launch pose and thickness are solved so the book lands exactly on the real object
   const W = SL.clamp((vp.w - 24) / 2, BOOK_MIN_W, BOOK_MAX_W);
   const H = Math.round(W * BOOK_ASPECT);
-  // Size at the start: a spine is as tall as the book; from the stand, match the book's real on-screen scale
-  const scale0 = isShelf ? launch.rect.h / H : (launch.designScale * launch.designW) / W;
-  const D = Math.max(16, launch.thicknessPx / scale0);
+  const anchorX = vp.w / 2;
+  const anchorY = vp.h * STAGE_ANCHOR_Y;
+  const { pose: launchPose, D } = useMemo(() => solveLaunchPose({ launch, W, H, anchorX, anchorY }), [launch, W, H, anchorX, anchorY]);
+  const scale0 = launch.rect.h / H;                       // nominal size at the start, used for the spine's decoration scale
   const displayScale = Math.min(1.45, (vp.w - 48) / (W + D * 0.5), (vp.h * 0.6) / H);
   const openScale = Math.min(1.25, (vp.w - 16) / (2 * W), (vp.h * 0.8) / H);
-  const poses = useMemo(() => buildPoses({ launch, W, anchorX: vp.w / 2, anchorY: vp.h * STAGE_ANCHOR_Y, scale0, openScale, displayScale }),
-    [launch, W, vp.w, vp.h, scale0, openScale, displayScale]);
+  const poses = useMemo(() => buildPoses({ launchPose, W, openScale, displayScale }), [launchPose, W, openScale, displayScale]);
   const launchT = poseTransform(poses.launch);
   const displayT = poseTransform(poses.display);
   const openT = poseTransform(poses.open);
@@ -121,7 +166,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   };
 
   /** Opens the cover and recenters the book so both pages are in view. */
-  const openCover = (event) => {
+  const openCover = useCallback((event) => {
     event.stopPropagation();
     if (phaseRef.current !== 'display') return;
     phaseRef.current = 'opening';
@@ -132,9 +177,9 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
     ]).then(([swung]) => {
       if (swung && phaseRef.current === 'opening') { phaseRef.current = 'open'; setHint(HINT_CLOSE); }
     });
-  };
+  }, [displayT, openT]);
 
-  return html`<div className="stage" onClick=${requestClose}>
+  return html`<div className="stage" style=${{ perspective: STAGE_PERSPECTIVE_PX + 'px', perspectiveOrigin: `${anchorX}px ${anchorY}px` }} onClick=${requestClose}>
     <div className="stage-dim" ref=${dimRef} />
     <button className="stage-close" aria-label="Put the book back" onClick=${(e) => { e.stopPropagation(); requestClose(); }}>×</button>
     <div className="stage-anchor" onClick=${(e) => e.stopPropagation()}>

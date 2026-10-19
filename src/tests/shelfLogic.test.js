@@ -278,3 +278,21 @@ test('every volume of every series in the example library fits its sticker', () 
     assert.ok(styles[b.series].size <= SL.spineThickness(b.pages) - 4 || styles[b.series].size === 11, b.id);
   }
 });
+
+// ------------------------------------------------------------------ room signatures
+test('roomSignature is stable for unchanged rooms and changes when books, order or sort change', () => {
+  const books = [book({ id: 'a', title: 'A' }), book({ id: 'b', title: 'B' })];
+  const first = SL.buildRooms(books).find((r) => r.groupKey === 'fantasy');
+  const again = SL.buildRooms(books.slice()).find((r) => r.groupKey === 'fantasy');
+  assert.equal(SL.roomSignature(first), SL.roomSignature(again));
+  const resorted = SL.buildRooms(books, { sortModes: { fantasy: 'title' } }).find((r) => r.groupKey === 'fantasy');
+  assert.notEqual(SL.roomSignature(first), SL.roomSignature(resorted));
+  const more = SL.buildRooms(books.concat(book({ id: 'c', title: 'C' }))).find((r) => r.groupKey === 'fantasy');
+  assert.notEqual(SL.roomSignature(first), SL.roomSignature(more));
+});
+
+test('roomSignature covers the reading room', () => {
+  const reading = SL.buildRooms([book({ id: 'r', status: 'reading', startedAt: '2026-10-01' })]).find((r) => r.kind === 'reading');
+  assert.equal(SL.roomSignature(reading), 'reading:r');
+  assert.equal(SL.roomSignature(SL.buildRooms([])[0]), 'reading:');
+});

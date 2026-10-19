@@ -50,4 +50,5 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 ## Prototype notes
 - Edit files in `src/prototype/`, then run `npm run build:prototype` and republish `bookshelf-prototype.html` as an Artifact.
 - The book's pull-out and put-back use the Web Animations API (`stageMotion.js`); Framer Motion only drives the swipe track. Never animate `opacity` on the 3D book: it flattens it.
+- How drawing and animation work, and the rules to keep: see `docs/RENDERING.md`.
 - Libraries (React, htm, Framer Motion) load from CDNs, so the page only renders where those hosts are reachable.
