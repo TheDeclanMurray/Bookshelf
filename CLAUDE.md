@@ -15,7 +15,6 @@ A personal media tracker that looks like an ornate, old library, as a PWA for iP
 - `src/tests/`: unit and integration tests
 - `infra/`: Terraform (to be added in Phase 1)
 - `logs/`: runtime logs (gitignored)
-- `.claude/hooks/`: safety hooks that block secrets and destructive git commands
 
 ## Component Connections
 The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and write DynamoDB.

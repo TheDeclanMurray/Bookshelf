@@ -3,7 +3,6 @@
 ## Now
 - [x] Planning and architecture
 - [x] Repo scaffold (folders, ignores, README, CLAUDE.md)
-- [ ] Turn on the `.claude/` safety hooks (waiting for user confirmation)
 - [ ] Phase 0 prototype (claude.ai Artifact)
   - [ ] Source art: ornate bookcase, wood textures, reading stand, desk (AI-generated or free)
   - [ ] Generated spine component (colors, genre font, thickness, series number)

@@ -20,3 +20,4 @@
 | 2026-10-19 | Sign in with Cognito Essentials passkeys (Face ID) | No passwords, and covered by the free tier |
 | 2026-10-19 | Host on a subdomain of the user's domain via Cloudflare DNS (DNS-only CNAME to CloudFront) | The user already owns the domain |
 | 2026-10-19 | Build the prototype as a claude.ai Artifact | Fastest way to try it on the iPhone before any infrastructure exists |
+| 2026-10-19 | Don't install the `.claude/` safety hooks (secret and destructive-git blockers) | They came from an older version of the setup skill and are no longer wanted. `.gitignore` and `.claudeignore` still keep `.env` files out. |
