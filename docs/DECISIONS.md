@@ -54,3 +54,6 @@
 | 2026-10-19 | The stage perspective lives on a flat wrapper (`.stage-clip`) that is clipped to the spine width at the end of a shelf put-back | Hides the side wall that neighbours would cover on a real shelf; clip-path on the 3D book itself would flatten it |
 | 2026-10-19 | Shelf put-back is two segments: arrive at shelf height first, then push into the slot (stand put-back stays a straight line) | A straight path crossed in front of the shelf board below the slot |
 | 2026-10-19 | Shelf books use the slot as the perspective origin while at the shelf; the stand book keeps the stage centre | Face-on at the shelf on every row, with no top or side showing. The origin animation runs on the main thread but is one property on one element |
+| 2026-10-19 | App URL is bookshelf.thedeclanmurray.com on the user's personal AWS account, all in us-east-1 | User's domain and account; CloudFront certificates must be in us-east-1, so one region keeps it simple |
+| 2026-10-19 | Phase 1 is single-user with no Goodreads import | User decision; data model keeps USER# keys for later |
+| 2026-10-19 | Phase 1 ports the prototype to Vite/React/TS modules (TSX instead of htm, npm instead of CDNs, bundled fonts) without redesigning it | The Artifact is the approved look; see docs/PHASE-1.md |
