@@ -32,6 +32,22 @@ function poseTransform(pose) {
 }
 
 /**
+ * A pose part of the way from one pose to another, with the position and the size/turn given separate fractions.
+ * @param {Object} from - Starting pose (x, y, scale, rotateX, rotateY, rotateZ)
+ * @param {Object} to - End pose
+ * @param {number} place - How far along the position (x, y) is, 0 to 1
+ * @param {number} shape - How far along the scale and turns are, 0 to 1
+ * @returns {Object} The blended pose
+ */
+function blendPose(from, to, place, shape) {
+  const mix = (a, b, t) => a + (b - a) * t;
+  return {
+    x: mix(from.x, to.x, place), y: mix(from.y, to.y, place), scale: mix(from.scale, to.scale, shape),
+    rotateX: mix(from.rotateX, to.rotateX, shape), rotateY: mix(from.rotateY, to.rotateY, shape), rotateZ: mix(from.rotateZ || 0, to.rotateZ || 0, shape),
+  };
+}
+
+/**
  * Stops a running animation on an element but keeps what is on screen right now.
  * @param {HTMLElement} element - Element that may be animating
  */
@@ -73,10 +89,10 @@ function playMotion(element, frames, { duration, easing = EASE_OUT, delay = 0 })
  * Moves an element from where it is (or from a known pose) to a target.
  * @param {HTMLElement} element - Element to animate
  * @param {{transform?: string, opacity?: number}} to - End values
- * @param {{duration: number, easing?: string, delay?: number, from?: Object}} options - Timing, and a known start when the element is at rest
+ * @param {{duration: number, easing?: string, delay?: number, from?: Object, via?: Object}} options - Timing, a known start when the element is at rest, and an optional middle keyframe ({transform, offset})
  * @returns {Promise<boolean>} Resolves true when it finished, false when interrupted
  */
-function playMotionTo(element, to, { from, ...timing }) {
+function playMotionTo(element, to, { from, via, ...timing }) {
   const interrupted = !!element.__motion;
   settleMotion(element);
   const style = getComputedStyle(element);                // what is on screen right now
@@ -85,5 +101,5 @@ function playMotionTo(element, to, { from, ...timing }) {
   for (const key of Object.keys(to)) {
     startFrame[key] = known && known[key] !== undefined ? known[key] : (key === 'opacity' ? Number(style.opacity) : style.transform);
   }
-  return playMotion(element, [startFrame, to], timing);
+  return playMotion(element, via ? [startFrame, via, to] : [startFrame, to], timing);
 }

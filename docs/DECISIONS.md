@@ -52,3 +52,4 @@
 | 2026-10-19 | Phase 0 rendering work is finished; covers stay generated drawings until the real app supplies cover images | Real covers are images from the backend, so they need no drawing code |
 | 2026-10-19 | Photographed pictures opt out of host image rules (`max-width: none`) | Host pages (the Artifact wrapper) can shrink any `<img>`, which moved the frame off-centre |
 | 2026-10-19 | The stage perspective lives on a flat wrapper (`.stage-clip`) that is clipped to the spine width at the end of a shelf put-back | Hides the side wall that neighbours would cover on a real shelf; clip-path on the 3D book itself would flatten it |
+| 2026-10-19 | Shelf put-back is two segments: arrive at shelf height first, then push into the slot (stand put-back stays a straight line) | A straight path crossed in front of the shelf board below the slot |

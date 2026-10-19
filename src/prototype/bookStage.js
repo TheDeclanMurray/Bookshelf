@@ -26,6 +26,9 @@ const SLOT_CLIP_START = 0.3;                              // the side wall start
 const SLOT_CLIP_END = 0.85;                               // ...and is completely hidden by here, so none shows while the book settles
 const SLOT_CLIP_PAD_PX = 0.5;                             // the clip window is this much wider than the spine, so its edges are not shaved
 const SLOT_CLIP_EASE_POWER = 3;                           // how sharply the clip closes in (1 = steadily)
+const SLIDE_MID_OFFSET = 0.4;                             // the put-back's middle keyframe sits this far through the (eased) motion
+const SLIDE_MID_PLACE = 1;                                // ...by then the book's position is this far toward the slot (0-1)
+const SLIDE_MID_SHAPE = 0.78;                             // ...but its size and turn only this far, so it comes in at shelf height, then pushes into the slot
 const HINT_OPEN = 'Tap the cover to open';
 const HINT_CLOSE = 'Tap outside to put it back';
 const COVER_CLOSED = 'rotateY(0deg)';
@@ -174,13 +177,16 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   };
 
   /** Slides the book back into its slot and ends the stage. */
-  const moveBack = (knownFrom) => {
+  const moveBack = (knownFrom, sourcePose) => {
     if (isShelf) clipToSlot();
     dimRef.current.classList.remove('is-on');
     if (isShelf) poseRef.current.classList.add('in-slot');   // darken the page edges again on the way back into the shadow
     if (!isShelf) onReturning();                          // the stand's book fades back in underneath
     playMotionTo(liftRef.current, { transform: LIFT_FLAT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT });
-    playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom })
+    // A straight line from the big pose to the slot dips the book below its shelf board on the way (it is nearer the camera,
+    // so its bottom edge projects lower). A middle keyframe brings it to shelf height first, then it pushes in.
+    const via = isShelf ? { transform: poseTransform(blendPose(sourcePose, poses.launch, SLIDE_MID_PLACE, SLIDE_MID_SHAPE)), offset: SLIDE_MID_OFFSET } : undefined;
+    playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom, via })
       .then((finished) => { if (finished) onClose(); });
   };
 
@@ -194,9 +200,9 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
       const atRest = was === 'open';
       playMotionTo(hingeRef.current, { transform: COVER_CLOSED }, { duration: COVER_CLOSE_MS, easing: EASE_IN_OUT, from: atRest ? { transform: COVER_OPEN } : undefined });
       // The book starts moving just before the cover lands, so there is no dead pause between the two
-      setTimeout(() => moveBack(atRest ? { transform: openT } : undefined), COVER_CLOSE_MS * COVER_CLOSE_OVERLAP);
+      setTimeout(() => moveBack(atRest ? { transform: openT } : undefined, poses.open), COVER_CLOSE_MS * COVER_CLOSE_OVERLAP);
     } else {
-      moveBack(was === 'display' ? { transform: displayT } : undefined);
+      moveBack(was === 'display' ? { transform: displayT } : undefined, poses.display);
     }
   };
 
