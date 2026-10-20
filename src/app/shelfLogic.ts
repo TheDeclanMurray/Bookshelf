@@ -77,7 +77,7 @@ const ShelfLogic = (function () {
    * @param {string} text - Any string
    * @returns {number} Unsigned 32-bit hash
    */
-  function hashString(text) {
+  function hashString(text: string) {
     let hash = 2166136261;                               // FNV offset basis
     for (let i = 0; i < text.length; i++) {
       hash ^= text.charCodeAt(i);                        // mix in the next character
@@ -92,7 +92,7 @@ const ShelfLogic = (function () {
    * @param {string|number} seed - Same seed gives the same sequence
    * @returns {function(): number} Function returning floats in [0, 1)
    */
-  function seededRandom(seed) {
+  function seededRandom(seed: string | number) {
     let state = hashString(String(seed));                // turn the seed into a 32-bit state
     return function nextRandom() {
       state = (state + 0x6D2B79F5) >>> 0;                // mulberry32 step
@@ -110,7 +110,7 @@ const ShelfLogic = (function () {
    * @returns {number} Whole pixels between MIN_SPINE_PX and MAX_SPINE_PX
    * @throws {RangeError} If pages is not a positive finite number
    */
-  function spineThickness(pages) {
+  function spineThickness(pages: number) {
     if (!Number.isFinite(pages) || pages <= 0) {
       throw new RangeError(`pages must be a positive number, got ${pages}`);
     }
@@ -124,7 +124,7 @@ const ShelfLogic = (function () {
    * @returns {number} Whole pixels around SPINE_BASE_HEIGHT_PX
    * @throws {TypeError} If bookId is not a non-empty string
    */
-  function spineHeight(bookId) {
+  function spineHeight(bookId: string) {
     if (typeof bookId !== 'string' || bookId === '') {
       throw new TypeError('bookId must be a non-empty string');
     }
@@ -142,7 +142,7 @@ const ShelfLogic = (function () {
    * @returns {number[]} [r, g, b], each a whole number 0-255
    * @throws {RangeError} If sat or light is outside 0-1
    */
-  function hslToRgb(hue, sat, light) {
+  function hslToRgb(hue: number, sat: number, light: number) {
     if (!(sat >= 0 && sat <= 1) || !(light >= 0 && light <= 1)) {
       throw new RangeError(`sat and light must be 0-1, got ${sat}, ${light}`);
     }
@@ -165,7 +165,7 @@ const ShelfLogic = (function () {
    * @param {number[]} rgb - [r, g, b], each 0-255
    * @returns {number} 0 (black) to 1 (white)
    */
-  function relativeLuminance(rgb) {
+  function relativeLuminance(rgb: number[]) {
     const [r, g, b] = rgb.map((channel) => {
       const c = channel / 255;
       return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);  // sRGB to linear
@@ -178,7 +178,7 @@ const ShelfLogic = (function () {
    * @param {number[]} rgb - Background [r, g, b]
    * @returns {string} LIGHT_TEXT or DARK_TEXT
    */
-  function readableTextColor(rgb) {
+  function readableTextColor(rgb: number[]) {
     const lum = relativeLuminance(rgb);
     const lightContrast = (1.05) / (lum + 0.05);         // against near-white text
     const darkContrast = (lum + 0.05) / 0.06;            // against near-black text
@@ -191,7 +191,7 @@ const ShelfLogic = (function () {
    * @param {{id: string, hue: number}} book - Needs an id and a 0-360 hue
    * @returns {{bg: string, bgDark: string, accent: string, text: string, isLight: boolean}}
    */
-  function spinePalette(book) {
+  function spinePalette(book: { id: string; hue: number }) {
     const roll = seededRandom('palette:' + book.id);
     const sat = 0.38 + roll() * 0.3;                     // 38-68% saturation
     const light = 0.2 + roll() * 0.3;                    // 20-50% lightness
@@ -212,7 +212,7 @@ const ShelfLogic = (function () {
    * @param {string} text - Title or series name
    * @returns {string} Lowercase key
    */
-  function titleSortKey(text) {
+  function titleSortKey(text: string) {
     return String(text).toLowerCase().replace(/^(the|a|an)\s+/, '');
   }
 
@@ -222,7 +222,7 @@ const ShelfLogic = (function () {
    * @returns {string} Lowercase key
    * @throws {TypeError} If author is empty
    */
-  function authorSortKey(author) {
+  function authorSortKey(author: string) {
     if (typeof author !== 'string' || author.trim() === '') {
       throw new TypeError('author must be a non-empty string');
     }
@@ -238,7 +238,7 @@ const ShelfLogic = (function () {
    * @param {Object} b - Book
    * @returns {number} Negative if a sorts first
    */
-  function compareLibraryOrder(a, b) {
+  function compareLibraryOrder(a: any, b: any) {
     const byAuthor = authorSortKey(a.author).localeCompare(authorSortKey(b.author));
     if (byAuthor !== 0) return byAuthor;
     const byGroup = titleSortKey(a.series || a.title).localeCompare(titleSortKey(b.series || b.title));
@@ -255,13 +255,11 @@ const ShelfLogic = (function () {
    * @returns {Object[]} New sorted array
    * @throws {RangeError} If mode is not a known sort mode
    */
-  function sortBooks(books, mode = DEFAULT_SORT_MODE) {
-    const comparers = {
+  function sortBooks(books: any[], mode: string = DEFAULT_SORT_MODE) {
+    const comparers: Record<string, (a: any, b: any) => number> = {
       library: compareLibraryOrder,
-      // newest finish date first; books without a date go last
       dateRead: (a, b) => (b.finishedAt || '').localeCompare(a.finishedAt || '') || compareLibraryOrder(a, b),
       rating: (a, b) => (b.rating || 0) - (a.rating || 0) || compareLibraryOrder(a, b),
-      // rainbow order by hue, then by title so ties are stable
       color: (a, b) => a.hue - b.hue || titleSortKey(a.title).localeCompare(titleSortKey(b.title)),
       title: (a, b) => titleSortKey(a.title).localeCompare(titleSortKey(b.title)),
     };
@@ -274,7 +272,7 @@ const ShelfLogic = (function () {
    * @param {string} mode - Current SORT_MODES key
    * @returns {string} Next key
    */
-  function nextSortMode(mode) {
+  function nextSortMode(mode: string) {
     const at = SORT_MODES.findIndex((m) => m.key === mode);
     return SORT_MODES[(at + 1) % SORT_MODES.length].key;   // unknown mode (-1) restarts at the first
   }
@@ -289,13 +287,13 @@ const ShelfLogic = (function () {
    *          Bookcases, each holding shelves of placed books
    * @throws {RangeError} If an option is not positive
    */
-  function packIntoCases(books, options: { shelfWidth?: number; shelvesPerCase?: number } = {}) {
+  function packIntoCases(books: any[], options: { shelfWidth?: number; shelvesPerCase?: number } = {}) {
     const shelfWidth = options.shelfWidth || SHELF_INNER_WIDTH_PX;
     const shelvesPerCase = options.shelvesPerCase || SHELVES_PER_CASE;
     if (shelfWidth <= 0 || shelvesPerCase < 1) {
       throw new RangeError('shelfWidth and shelvesPerCase must be positive');
     }
-    const cases = [];
+    const cases: Array<{ shelves: Array<any[]> }> = [];
     let used = 0;                                        // width used on the current shelf
     for (const book of books) {
       const thickness = spineThickness(book.pages);
@@ -325,7 +323,7 @@ const ShelfLogic = (function () {
    * @param {number} n - 1 to 20
    * @returns {string} Numeral, or the plain number as text past 20
    */
-  function toRoman(n) {
+  function toRoman(n: number) {
     return ROMAN_NUMERALS[n] || String(n);
   }
 
@@ -335,7 +333,7 @@ const ShelfLogic = (function () {
    * @param {number} index - 0 for the first bookcase of the group
    * @returns {string} "Fantasy" or "Fantasy II"
    */
-  function caseTitle(name, index) {
+  function caseTitle(name: string, index: number) {
     return index === 0 ? name : `${name} ${toRoman(index + 1)}`;
   }
 
@@ -347,7 +345,7 @@ const ShelfLogic = (function () {
    * @param {Array<{key: string}>} genres - Known genres
    * @returns {{reading: Object[], tbr: Object[], dnf: Object[], youth: Object[], byGenre: Object}}
    */
-  function groupBooks(books, genres) {
+  function groupBooks(books: any[], genres: Array<{ key: string }>) {
     const known = new Set(genres.map((g) => g.key));
     const groups: { reading: any[]; tbr: any[]; dnf: any[]; youth: any[]; byGenre: Record<string, any[]> } = { reading: [], tbr: [], dnf: [], youth: [], byGenre: {} };
     for (const book of books) {
@@ -372,14 +370,14 @@ const ShelfLogic = (function () {
    * @param {{genres?: Object[], sortModes?: Object}} [options] - Genre list and a sort mode per group key
    * @returns {Object[]} Rooms: {id, kind: 'case'|'reading', title, theme, ...}
    */
-  function buildRooms(books, options: { genres?: any[]; sortModes?: Record<string, string> } = {}) {
+  function buildRooms(books: any[], options: { genres?: any[]; sortModes?: Record<string, string> } = {}) {
     const genres = options.genres || GENRES;
     const sortModes = options.sortModes || {};
     const groups = groupBooks(books, genres);
     const rooms = [];
 
     // Adds one room per bookcase needed to hold a group's books
-    const addGroup = (groupKey, name, theme, groupBooksList) => {
+    const addGroup = (groupKey: string, name: string, theme: string, groupBooksList: any[]) => {
       if (groupBooksList.length === 0) return;           // empty groups are hidden
       const sorted = sortBooks(groupBooksList, sortModes[groupKey] || DEFAULT_SORT_MODE);
       const cases = packIntoCases(sorted);
@@ -407,9 +405,9 @@ const ShelfLogic = (function () {
    * @param {Object} room - A room from buildRooms
    * @returns {string} Signature
    */
-  function roomSignature(room) {
+  function roomSignature(room: any) {
     if (room.kind === 'reading') return `reading:${room.book ? room.book.id : ''}`;
-    const layout = room.shelves.map((shelf) => shelf.map((placed) => placed.book.id).join(',')).join('/');
+    const layout = room.shelves.map((shelf: any) => shelf.map((placed: any) => placed.book.id).join(',')).join('/');
     return `${room.id}|${room.sortMode}|${room.bookCount}|${room.title}|${layout}`;
   }
 
@@ -420,7 +418,7 @@ const ShelfLogic = (function () {
    * @param {Object[]} [genres] - Genre list to search
    * @returns {Object} Genre, or the first genre if the key is unknown
    */
-  function genreOf(book, genres = GENRES) {
+  function genreOf(book: any, genres: any[] = GENRES) {
     return genres.find((g) => g.key === book.genre) || genres[0];
   }
 
@@ -429,7 +427,7 @@ const ShelfLogic = (function () {
    * @param {Object} book - Book, possibly in a series
    * @returns {string} Label, or '' for a standalone
    */
-  function seriesLabel(book) {
+  function seriesLabel(book: any) {
     if (!book.series || !book.seriesNumber) return '';
     return book.seriesTotal ? `Book ${book.seriesNumber} of ${book.seriesTotal}` : `Book ${book.seriesNumber}`;
   }
@@ -441,7 +439,7 @@ const ShelfLogic = (function () {
    * @returns {number} Days; negative if toIso is earlier
    * @throws {TypeError} If either date is not YYYY-MM-DD
    */
-  function daysBetween(fromIso, toIso) {
+  function daysBetween(fromIso: string, toIso: string) {
     const pattern = /^\d{4}-\d{2}-\d{2}$/;
     if (!pattern.test(fromIso) || !pattern.test(toIso)) {
       throw new TypeError(`dates must be YYYY-MM-DD, got ${fromIso} and ${toIso}`);
@@ -454,7 +452,7 @@ const ShelfLogic = (function () {
    * @param {string} iso - YYYY-MM-DD
    * @returns {string} Short date, or '' for an empty value
    */
-  function formatShortDate(iso) {
+  function formatShortDate(iso: string) {
     if (!iso) return '';
     const [year, month, day] = iso.split('-').map(Number);
     return `${MONTH_NAMES[month - 1]} ${day}, ${year}`;
@@ -465,8 +463,8 @@ const ShelfLogic = (function () {
    * @param {Date} [now] - Date to format
    * @returns {string} YYYY-MM-DD
    */
-  function todayIso(now = new Date()) {
-    const pad = (n) => String(n).padStart(2, '0');
+  function todayIso(now: Date = new Date()) {
+    const pad = (n: number) => String(n).padStart(2, '0');
     return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
   }
 
@@ -477,7 +475,7 @@ const ShelfLogic = (function () {
    * @param {number} max - Upper bound
    * @returns {number} value limited to [min, max]
    */
-  function clamp(value, min, max) {
+  function clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value));
   }
 
@@ -488,13 +486,13 @@ const ShelfLogic = (function () {
    * @param {Object[]} books - Every book in the library
    * @returns {Object<string, {size: number, bg: string, text: string, ring: string}>} Style by series name
    */
-  function buildSeriesStyles(books) {
+  function buildSeriesStyles(books: any[]) {
     const bySeries: Record<string, any[]> = {};
     for (const book of books) {
       if (!book.series || !book.seriesNumber) continue;   // only numbered series books get stickers
       (bySeries[book.series] = bySeries[book.series] || []).push(book);
     }
-    const styles = {};
+    const styles: Record<string, { size: number; bg: string; text: string; ring: string }> = {};
     for (const [name, volumes] of Object.entries(bySeries)) {
       const thinnest = Math.min(...volumes.map((b) => spineThickness(b.pages)));
       const first = volumes.reduce((a, b) => (b.seriesNumber < a.seriesNumber ? b : a));   // volume 1 sets the color

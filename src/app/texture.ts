@@ -19,7 +19,7 @@ const WARP_STRENGTH = 0.32;                               // how far the warp be
  * @param {number} x - Input
  * @returns {number} 0 to 1
  */
-function smoothStep(edge0, edge1, x) {
+function smoothStep(edge0: number, edge1: number, x: number) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
   return t * t * (3 - 2 * t);
 }
@@ -32,7 +32,7 @@ function smoothStep(edge0, edge1, x) {
  * @param {number} seed - Different seeds give different patterns
  * @returns {number} 0 to 1
  */
-function latticeValue(ix, iy, period, seed) {
+function latticeValue(ix: number, iy: number, period: number, seed: number) {
   const x = ((ix % period) + period) % period;
   const y = ((iy % period) + period) % period;
   let h = (Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(seed, 1442695041)) | 0;
@@ -49,7 +49,7 @@ function latticeValue(ix, iy, period, seed) {
  * @param {number} seed - Pattern seed
  * @returns {number} 0 to 1
  */
-function valueNoise(x, y, period, seed) {
+function valueNoise(x: number, y: number, period: number, seed: number) {
   const x0 = Math.floor(x), y0 = Math.floor(y);
   const sx = smoothStep(0, 1, x - x0), sy = smoothStep(0, 1, y - y0);
   const top = latticeValue(x0, y0, period, seed) * (1 - sx) + latticeValue(x0 + 1, y0, period, seed) * sx;
@@ -65,7 +65,7 @@ function valueNoise(x, y, period, seed) {
  * @param {number} seed - Pattern seed
  * @returns {number} 0 to 1, mostly near 0.5
  */
-function fractalNoise(u, v, basePeriod, seed) {
+function fractalNoise(u: number, v: number, basePeriod: number, seed: number) {
   let sum = 0, amplitude = 0.5, total = 0;
   for (let octave = 0; octave < NOISE_OCTAVES; octave++) {
     const period = basePeriod * 2 ** octave;
@@ -83,7 +83,7 @@ function fractalNoise(u, v, basePeriod, seed) {
  * @param {number} v - Vertical position, 0 to 1
  * @returns {number} Opacity 0 to 1
  */
-function veinStrength(u, v) {
+function veinStrength(u: number, v: number) {
   const warpedU = u + WARP_STRENGTH * (fractalNoise(u, v, 2, 11) - 0.5);        // bend the lines so they wander
   const warpedV = v + WARP_STRENGTH * (fractalNoise(u + 0.37, v + 0.61, 2, 29) - 0.5);
   const distance = Math.abs(fractalNoise(warpedU, warpedV, 3, 3) - 0.5) * 2;    // 0 right on a vein

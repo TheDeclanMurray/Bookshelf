@@ -8,6 +8,9 @@
  */
 
 // ----------------------------------------------------------------- constants
+type Pose = { x: number; y: number; scale: number; rotateX: number; rotateY: number; rotateZ?: number };
+type AnimatedElement = HTMLElement & { __motion?: Animation | null };
+
 const EASE_OUT = 'cubic-bezier(0.22, 0.85, 0.25, 1)';     // quick start, long soft landing (pull-out)
 const EASE_IN_OUT = 'cubic-bezier(0.45, 0, 0.2, 1)';      // gentle both ends (put-back, cover close)
 const EASE_OPEN = 'cubic-bezier(0.3, 0.7, 0.2, 1)';       // cover swing and recentering
@@ -27,7 +30,7 @@ function prefersReducedMotion() {
  * @param {{x: number, y: number, scale: number, rotateX: number, rotateY: number, rotateZ?: number}} pose - Position (px), scale, turns (degrees)
  * @returns {string} transform value
  */
-function poseTransform(pose) {
+function poseTransform(pose: Pose) {
   return `translate3d(${pose.x}px, ${pose.y}px, 0px) scale3d(${pose.scale}, ${pose.scale}, ${pose.scale}) rotateZ(${pose.rotateZ || 0}deg) rotateX(${pose.rotateX}deg) rotateY(${pose.rotateY}deg)`;
 }
 
@@ -39,8 +42,8 @@ function poseTransform(pose) {
  * @param {number} shape - How far along the scale and turns are, 0 to 1
  * @returns {Object} The blended pose
  */
-function blendPose(from, to, place, shape) {
-  const mix = (a, b, t) => a + (b - a) * t;
+function blendPose(from: Pose, to: Pose, place: number, shape: number): Pose {
+  const mix = (a: number, b: number, t: number) => a + (b - a) * t;
   return {
     x: mix(from.x, to.x, place), y: mix(from.y, to.y, place), scale: mix(from.scale, to.scale, shape),
     rotateX: mix(from.rotateX, to.rotateX, shape), rotateY: mix(from.rotateY, to.rotateY, shape), rotateZ: mix(from.rotateZ || 0, to.rotateZ || 0, shape),
@@ -51,7 +54,7 @@ function blendPose(from, to, place, shape) {
  * Stops a running animation on an element but keeps what is on screen right now.
  * @param {HTMLElement} element - Element that may be animating
  */
-function settleMotion(element) {
+function settleMotion(element: AnimatedElement) {
   const running = element.__motion;
   if (!running) return;
   try { running.commitStyles(); } catch (error) { /* element not rendered: nothing to keep */ }
@@ -67,14 +70,14 @@ function settleMotion(element) {
  * @param {{duration: number, easing?: string, delay?: number}} options - Timing in milliseconds
  * @returns {Promise<boolean>} Resolves true when it finished, false when something interrupted it
  */
-function playMotion(element, frames, { duration, easing = EASE_OUT, delay = 0 }) {
+function playMotion(element: AnimatedElement, frames: Record<string, unknown>[], { duration, easing = EASE_OUT, delay = 0 }: { duration: number; easing?: string; delay?: number }): Promise<boolean> {
   const last = frames[frames.length - 1];
   const applyFinal = () => {
-    for (const [key, value] of Object.entries(last)) if (key !== 'offset' && key !== 'easing') element.style[key] = String(value);   // keep the end state (transform, perspectiveOrigin, ...)
+    for (const [key, value] of Object.entries(last)) if (key !== 'offset' && key !== 'easing') (element.style as unknown as Record<string, string>)[key] = String(value);   // keep the end state (transform, perspectiveOrigin, ...)
   };
   settleMotion(element);
   if (typeof element.animate !== 'function') { applyFinal(); return Promise.resolve(true); }   // very old browser: jump to the end
-  const animation = element.animate(frames, { duration: prefersReducedMotion() ? REDUCED_MOTION_MS : duration, easing, delay, fill: 'both' });
+  const animation = element.animate(frames as Keyframe[], { duration: prefersReducedMotion() ? REDUCED_MOTION_MS : duration, easing, delay, fill: 'both' });
   element.__motion = animation;
   return animation.finished.then(() => {
     applyFinal();                                          // keep the end state once the animation object is gone
@@ -91,16 +94,17 @@ function playMotion(element, frames, { duration, easing = EASE_OUT, delay = 0 })
  * @param {{duration: number, easing?: string, delay?: number, from?: Object, via?: Object}} options - Timing, a known start when the element is at rest, and an optional middle keyframe (end-value keys plus offset)
  * @returns {Promise<boolean>} Resolves true when it finished, false when interrupted
  */
-function playMotionTo(element, to, { from, via, ...timing }: { duration: number; easing?: string; delay?: number; from?: any; via?: any }) {
+function playMotionTo(element: AnimatedElement, to: Record<string, unknown>, { from, via, ...timing }: { duration: number; easing?: string; delay?: number; from?: Record<string, unknown>; via?: Record<string, unknown> }): Promise<boolean> {
   const interrupted = !!element.__motion;
   settleMotion(element);
   const style = getComputedStyle(element);                // what is on screen right now
   const known = interrupted ? undefined : from;           // a given start is only trusted when the element was at rest
-  const startFrame = {};
+  const startFrame: Record<string, unknown> = {};
   for (const key of Object.keys(to)) {
-    startFrame[key] = known && known[key] !== undefined ? known[key] : (key === 'opacity' ? Number(style.opacity) : style[key]);
+    startFrame[key] = known && known[key] !== undefined ? known[key] : (key === 'opacity' ? Number(style.opacity) : (style as unknown as Record<string, string>)[key]);
   }
   return playMotion(element, via ? [startFrame, via, to] : [startFrame, to], timing);
 }
 
+export type { Pose };
 export { EASE_OUT, EASE_IN_OUT, EASE_OPEN, REDUCED_MOTION_MS, prefersReducedMotion, poseTransform, blendPose, settleMotion, playMotion, playMotionTo };

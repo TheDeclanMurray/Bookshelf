@@ -26,7 +26,7 @@ const STAND_TOP_Y = 218;                                  // where the abacus' t
 const ReadingRoom = memo(function ReadingRoom({ room, onPickReading, today }: ReadingRoomProps) {
   const book = room.book;
   const days = book && book.startedAt ? SL.daysBetween(book.startedAt, today) : 0;
-  const handleClick = useCallback((event) => {
+  const handleClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
     if (!isRealTap(event)) return;                         // ignore the touch that ends a swipe
     onPickReading(book, event.currentTarget);
   }, [book, onPickReading]);

@@ -23,7 +23,7 @@ const SpineCache = (function () {
   const memory = new Map();                               // key -> picture URL
   const volatileKeys = new Set();                         // keys drawn without confirmed fonts: not saved, redrawn later
   const listeners = new Set<(epoch: number) => void>();                            // components to refresh when pictures are redrawn
-  let database = null;
+  let database: IDBDatabase | null = null;
   let fontsReady = false;
   let epoch = 0;                                          // changes whenever pictures must be redrawn
 
@@ -31,8 +31,8 @@ const SpineCache = (function () {
    * Opens the browser database.
    * @returns {Promise<(IDBDatabase|null)>} The database, or null when the browser will not allow it
    */
-  function openDatabase() {
-    return new Promise((resolve) => {
+  function openDatabase(): Promise<IDBDatabase | null> {
+    return new Promise<IDBDatabase | null>((resolve) => {
       try {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
         request.onupgradeneeded = () => request.result.createObjectStore(STORE);
@@ -51,7 +51,7 @@ const SpineCache = (function () {
     database = await openDatabase();
     if (!database) return 0;
     return new Promise((resolve) => {
-      const entries = [];
+      const entries: Array<{ key: IDBValidKey; createdAt: number }> = [];
       const request = database.transaction(STORE, 'readonly').objectStore(STORE).openCursor();
       request.onsuccess = () => {
         const cursor = request.result;
@@ -69,7 +69,7 @@ const SpineCache = (function () {
    * Deletes one saved picture (errors are ignored: the cache is only a speed-up).
    * @param {string} key - Cache key
    */
-  function remove(key) {
+  function remove(key: IDBValidKey) {
     try { database.transaction(STORE, 'readwrite').objectStore(STORE).delete(key); } catch (error) { /* ignore */ }
   }
 
@@ -78,7 +78,7 @@ const SpineCache = (function () {
    * @param {string} key - Cache key
    * @returns {(string|undefined)} Picture URL when known
    */
-  function get(key) {
+  function get(key: string) {
     return memory.get(key);
   }
 
@@ -88,7 +88,7 @@ const SpineCache = (function () {
    * @param {string} url - Picture data URL
    * @param {boolean} persist - False for pictures that must not be saved
    */
-  function put(key, url, persist) {
+  function put(key: string, url: string, persist: boolean) {
     memory.set(key, url);
     const mayPersist = persist && (fontsReady || (window as any).__spineForcePersist === true);   // the flag lets tests exercise saving without web fonts
     if (persist && !mayPersist) volatileKeys.add(key);
@@ -123,7 +123,7 @@ const SpineCache = (function () {
    * @returns {Promise<void>}
    */
   async function prepare() {
-    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const fonts = loadFonts().then((ok) => { if (ok) markFontsReady(); return ok; });
     await Promise.race([preload(), wait(PREPARE_WAIT_MS)]);
     await Promise.race([fonts, wait(FONT_WAIT_MS)]);
@@ -134,7 +134,7 @@ const SpineCache = (function () {
    * @param {function(number): void} listener - Called with the new epoch
    * @returns {function(): void} Unsubscribe function
    */
-  function subscribe(listener) {
+  function subscribe(listener: (epoch: number) => void) {
     listeners.add(listener);
     return () => { listeners.delete(listener); };
   }

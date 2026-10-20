@@ -1,6 +1,9 @@
 import { SL } from './reactSetup';
 import { SpineLayout } from './spineLayout';
 import { SpineCache } from './spineCache';
+import type { Book } from './types';
+
+type Sticker = { size: number; bg: string; text: string; ring: string };
 
 /**
  * spineCanvas.js
@@ -20,7 +23,7 @@ const AUTHOR_FONT = "'Cinzel','Trajan Pro',Georgia,serif";       // the same dis
 const MAX_RATIO = 3;                                      // never draw more than 3x (phones top out there)
 const PICTURE_TYPE = 'image/webp';                        // Safari falls back to PNG on its own
 const PICTURE_QUALITY = 0.92;
-let clothTileCanvas = null;                               // built on first use
+let clothTileCanvas: HTMLCanvasElement | null = null;      // built on first use
 
 /**
  * The pixel ratio spines are drawn at.
@@ -56,7 +59,7 @@ function clothTile() {
  * @param {number} maxWidth - Available length in px
  * @returns {string} Text, possibly cut short with an ellipsis
  */
-function fitText(context, text, maxWidth) {
+function fitText(context: CanvasRenderingContext2D, text: string, maxWidth: number) {
   if (context.measureText(text).width <= maxWidth) return text;
   let cut = text;
   while (cut.length > 1 && context.measureText(cut + '…').width > maxWidth) cut = cut.slice(0, -1);
@@ -69,7 +72,7 @@ function fitText(context, text, maxWidth) {
  *   size in px, design unit (px per unit), series sticker style, and the pixel ratio to draw at
  * @returns {HTMLCanvasElement} The drawn spine
  */
-function drawSpineCanvas({ book, width, height, unit, sticker, ratio }) {
+function drawSpineCanvas({ book, width, height, unit, sticker, ratio }: { book: Book; width: number; height: number; unit: number; sticker?: Sticker; ratio: number }) {
   const palette = SL.spinePalette(book);
   const layout = SpineLayout.computeLayout({ book, width, height, unit, sticker, isLight: palette.isLight });
   const canvas = document.createElement('canvas');
@@ -79,7 +82,7 @@ function drawSpineCanvas({ book, width, height, unit, sticker, ratio }) {
   context.scale(canvas.width / width, canvas.height / height);   // from here on, draw in layout px
   const radius = SPINE_CORNER_UNITS * unit;
   const stripeColor = `hsl(${(book.hue + 150) % 360}, 80%, 62%)`;
-  const colors = { ink: INK_COLOR, accent: palette.accent, text: palette.text };
+  const colors: Record<string, string> = { ink: INK_COLOR, accent: palette.accent, text: palette.text };
 
   // Rounded top corners: everything below is clipped to this shape
   context.beginPath();
@@ -128,7 +131,7 @@ function drawSpineCanvas({ book, width, height, unit, sticker, ratio }) {
 
   // Title and author run down the spine
   const centerX = width / 2;
-  const drawDown = (text, top, length, fontSize, font, color, shadow, alpha, upper) => {
+  const drawDown = (text: string, top: number, length: number, fontSize: number, font: string, color: string, shadow: boolean, alpha: number, upper: boolean) => {
     context.save();
     context.translate(centerX, top);
     context.rotate(Math.PI / 2);                          // text runs downward, letter tops toward the right
@@ -174,7 +177,7 @@ function drawSpineCanvas({ book, width, height, unit, sticker, ratio }) {
  *   persist false keeps the picture for this visit only (used for the big 3D copy, whose size depends on the screen)
  * @returns {string} Data URL of the picture
  */
-function spineBitmapUrl({ book, width, height, unit, sticker, persist = true }) {
+function spineBitmapUrl({ book, width, height, unit, sticker, persist = true }: { book: Book; width: number; height: number; unit: number; sticker?: Sticker; persist?: boolean }) {
   const ratio = spineRatio();
   const key = SpineLayout.cacheKey({ book, width, height, unit, sticker, ratio: persist ? ratio : ratio + 'm' });
   const cached = SpineCache.get(key);

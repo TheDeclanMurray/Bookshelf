@@ -1,5 +1,8 @@
 import { SL, motion, useCallback, useLayoutEffect, useMemo, useRef, useState } from './reactSetup';
+import type { Book, Launch, Viewport } from './types';
+import type { SolvePose } from './poseSolver';
 import { PoseSolver } from './poseSolver';
+import type { Pose } from './stageMotion';
 import { EASE_IN_OUT, EASE_OPEN, EASE_OUT, blendPose, playMotion, playMotionTo, poseTransform, settleMotion } from './stageMotion';
 import { BookBox } from './book3d';
 
@@ -50,7 +53,7 @@ const LIFT_FLAT = 'translateZ(0px)';
  * @param {number} D - Book thickness
  * @returns {number[][]} Four [x, y, z] corners
  */
-function launchFaceCorners(kind, W, H, D) {
+function launchFaceCorners(kind: string, W: number, H: number, D: number) {
   if (kind === 'shelf') return [[-W / 2, -H / 2, -D / 2], [-W / 2, -H / 2, D / 2], [-W / 2, H / 2, D / 2], [-W / 2, H / 2, -D / 2]];
   return [[-W / 2, -H / 2, D / 2], [W / 2, -H / 2, D / 2], [W / 2, H / 2, D / 2], [-W / 2, H / 2, D / 2]];
 }
@@ -62,19 +65,19 @@ function launchFaceCorners(kind, W, H, D) {
  *   launch holds the measured screen corners of the real object ({corners, rect, rotateX, rotateY, ...})
  * @returns {{pose: Object, D: number}} Launch pose for poseTransform() and the book thickness to build with
  */
-function solveLaunchPose({ launch, W, H, anchorX, anchorY }) {
+function solveLaunchPose({ launch, W, H, anchorX, anchorY }: { launch: Launch; W: number; H: number; anchorX: number; anchorY: number }) {
   const targets = launch.corners.flatMap(([x, y]) => [x - anchorX, y - anchorY]);   // relative to the perspective origin
   const isShelf = launch.kind === 'shelf';
-  const solve = (D, initial, free) => PoseSolver.solvePose({ corners: launchFaceCorners(launch.kind, W, H, D), targets, initial, free, perspective: STAGE_PERSPECTIVE_PX });
+  const solve = (D: number, initial: SolvePose, free: string[]) => PoseSolver.solvePose({ corners: launchFaceCorners(launch.kind, W, H, D), targets, initial, free, perspective: STAGE_PERSPECTIVE_PX });
   const center = { x: launch.rect.cx - anchorX, y: launch.rect.cy - anchorY };
   if (!isShelf) {
     const D = W * launch.depthRatio;                      // same proportions as the book on the stand
-    const initial = { ...center, scale: (launch.designScale * launch.designW) / W, rotateX: launch.rotateX, rotateY: launch.rotateY };
+    const initial: SolvePose = { ...center, scale: (launch.designScale * launch.designW) / W, rotateX: launch.rotateX, rotateY: launch.rotateY };
     return { pose: solve(D, { ...initial, rotateZ: 0 }, ['x', 'y', 'scale', 'rotateX', 'rotateY', 'rotateZ']).pose, D };   // the stand's stacked turns need a roll too
   }
   // A spine: height and position fix the scale; its on-screen width then fixes the book's thickness
   let D = Math.max(16, launch.thicknessPx / (launch.rect.h / H));
-  let pose = { ...center, scale: launch.rect.h / H, rotateX: launch.rotateX, rotateY: launch.rotateY };
+  let pose: SolvePose = { ...center, scale: launch.rect.h / H, rotateX: launch.rotateX, rotateY: launch.rotateY };
   for (let pass = 0; pass < SOLVE_PASSES; pass++) {
     pose = solve(D, pose, ['x', 'y', 'scale']).pose;
     const projected = PoseSolver.projectCorners(launchFaceCorners('shelf', W, H, D), pose, STAGE_PERSPECTIVE_PX);
@@ -88,7 +91,7 @@ function solveLaunchPose({ launch, W, H, anchorX, anchorY }) {
  * @param {Object} geo - {launchPose, W, openScale, displayScale}
  * @returns {{launch: Object, display: Object, open: Object}} Poses for poseTransform()
  */
-function buildPoses(geo) {
+function buildPoses(geo: { launchPose: SolvePose; W: number; openScale: number; displayScale: number }) {
   const { launchPose, W, openScale, displayScale } = geo;
   return {
     launch: launchPose,
@@ -106,7 +109,7 @@ function buildPoses(geo) {
  *   onReturning runs when the put-back motion starts (the stand shows its book again); onClose runs once the book is back in place
  * @returns {React.ReactElement} Stage overlay
  */
-function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) {
+function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }: { book: Book; allBooks: Book[]; today: string; launch: Launch; vp: Viewport; onReturning: () => void; onClose: () => void }) {
   const isShelf = launch.kind === 'shelf';
   const [hint, setHint] = useState('');
   const [pagesReady, setPagesReady] = useState(false);    // the printed pages mount after the pull-out, so they cost nothing during it
@@ -192,7 +195,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   };
 
   /** Slides the book back into its slot and ends the stage. */
-  const moveBack = (knownFrom, sourcePose) => {
+  const moveBack = (knownFrom: Record<string, string> | undefined, sourcePose: SolvePose) => {
     if (isShelf) clipToSlot();
     dimRef.current.classList.remove('is-on');
     if (isShelf) poseRef.current.classList.add('in-slot');   // darken the page edges again on the way back into the shadow
@@ -206,7 +209,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
         via: { perspectiveOrigin: slotOrigin, offset: SLIDE_MID_OFFSET } });
     }
     playMotionTo(poseRef.current, { transform: launchT }, { duration: PUT_BACK_MS, easing: EASE_IN_OUT, from: knownFrom, via })
-      .then((finished) => { if (finished) onClose(); });
+      .then((finished: boolean) => { if (finished) onClose(); });
   };
 
   /** Puts the book back: shuts the cover first if it is open, then slides the book home in one smooth motion. */
@@ -226,7 +229,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }) 
   };
 
   /** Opens the cover and recenters the book so both pages are in view. */
-  const openCover = useCallback((event) => {
+  const openCover = useCallback((event: React.MouseEvent) => {
     event.stopPropagation();
     if (phaseRef.current !== 'display') return;
     phaseRef.current = 'opening';

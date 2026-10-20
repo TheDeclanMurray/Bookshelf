@@ -38,7 +38,7 @@ const EGG_TILE = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/20
  * @param {boolean} mirrored - Wind the other way (for the right-hand scroll)
  * @returns {string} SVG polyline points
  */
-function spiralPoints(radius, mirrored) {
+function spiralPoints(radius: number, mirrored: boolean) {
   const points = [];
   for (let i = 0; i <= SPIRAL_STEPS; i++) {
     const t = i / SPIRAL_STEPS;
@@ -55,7 +55,7 @@ function spiralPoints(radius, mirrored) {
  * @param {{x: number, z: number, front: boolean}} props - Center x, depth, and which side it faces
  * @returns {React.ReactElement} Circular marble panel with a carved spiral
  */
-function Volute3D({ x, z, front }) {
+function Volute3D({ x, z, front }: { x: number; z: number; front: boolean }) {
   const size = VOLUTE_R * 2;
   const mirrored = x > 0;                                 // the two scrolls on a face wind toward each other
   const transform = front ? `translateZ(${z}px)` : `translateZ(${-z}px) rotateY(180deg)`;
@@ -74,7 +74,7 @@ function Volute3D({ x, z, front }) {
  * @param {{front: boolean}} props - Which side it faces
  * @returns {React.ReactElement} Marble band with a carved edge
  */
-function Canalis3D({ front }) {
+function Canalis3D({ front }: { front: boolean }) {
   const width = (VOLUTE_X - VOLUTE_R * 0.4) * 2;
   const clip = `path("M 0 0 H ${width} V 7 Q ${width / 2} 25 0 7 Z")`;
   const transform = front ? `translateZ(${CAPITAL_DEPTH / 2 - 1}px)` : `translateZ(${-(CAPITAL_DEPTH / 2 - 1)}px) rotateY(180deg)`;
@@ -92,7 +92,7 @@ function Canalis3D({ front }) {
  * @param {{x: number}} props - Center x
  * @returns {React.ReactElement} Round bolster lying front to back
  */
-function Cushion3D({ x }) {
+function Cushion3D({ x }: { x: number }) {
   // Built as an upright cylinder, then laid on its side so its length runs front to back
   return (<div className="f3-group" style={{ transform: `translate3d(${x}px, ${VOLUTE_Y}px, 0px) rotateX(90deg)` }}>
     <Frustum3D rTop={VOLUTE_R - 1} rBottom={VOLUTE_R - 1} h={CAPITAL_DEPTH - 2} y={-(CAPITAL_DEPTH - 2) / 2} facets={18} veins={false}  />
@@ -114,7 +114,7 @@ function IonicShaft3D() {
     pieces.push({ theta: i * slot, span: slot * FLUTE_SHARE, flute: true });
     pieces.push({ theta: i * slot + slot / 2, span: slot * (1 - FLUTE_SHARE), flute: false });
   }
-  const lightAt = (degrees) => { const a = (degrees * Math.PI) / 180; return lightAmount([Math.sin(a) * Math.cos(tilt), -Math.sin(tilt), Math.cos(a) * Math.cos(tilt)]); };
+  const lightAt = (degrees: number) => { const a = (degrees * Math.PI) / 180; return lightAmount([Math.sin(a) * Math.cos(tilt), -Math.sin(tilt), Math.cos(a) * Math.cos(tilt)]); };
   // A solid core just inside the flutes so the hairline gaps between them show shaded marble, not the page behind
   const core = <Frustum3D rTop={rTop - 2} rBottom={rBottom - 2} h={h} y={y} facets={12} veins={false}  />;
   return (<React.Fragment>{core}{pieces.map((piece, i) => {

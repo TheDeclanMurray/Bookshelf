@@ -16,7 +16,7 @@ const SL = ShelfLogic;                                    // short alias used by
 const DragGuard = { dragging: false };
 
 /** Sticker styles per series name (built once from the whole library in app.js). */
-const SeriesStyleContext = React.createContext({});
+const SeriesStyleContext = React.createContext<Record<string, { size: number; bg: string; text: string; ring: string }>>({});
 
 
 const TAP_SLOP_PX = 10;                                   // a finger that moves further than this between down and up is a swipe, not a tap
@@ -26,7 +26,7 @@ const TapTracker = { x: 0, y: 0 };                        // where the latest pr
  * Remembers where a press began; call from onPointerDown.
  * @param {PointerEvent} event - The pointer-down event
  */
-function noteTapStart(event) {
+function noteTapStart(event: React.PointerEvent) {
   TapTracker.x = event.clientX;
   TapTracker.y = event.clientY;
 }
@@ -36,7 +36,7 @@ function noteTapStart(event) {
  * @param {MouseEvent} event - The click event
  * @returns {boolean} True when the press barely moved and no drag is in progress
  */
-function isRealTap(event) {
+function isRealTap(event: React.MouseEvent) {
   return !DragGuard.dragging && Math.hypot(event.clientX - TapTracker.x, event.clientY - TapTracker.y) <= TAP_SLOP_PX;
 }
 

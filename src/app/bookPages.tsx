@@ -1,4 +1,5 @@
 import { React, SL } from './reactSetup';
+import type { Book } from './types';
 
 /**
  * bookPages.js
@@ -7,8 +8,8 @@ import { React, SL } from './reactSetup';
  */
 
 // ----------------------------------------------------------------- constants
-const AGE_LABELS = { adult: 'Adult', ya: 'Young adult', kids: 'Kids' };
-const STATUS_LABELS = { read: 'Read', dnf: 'Did not finish', tbr: 'To be read', reading: 'Reading now' };
+const AGE_LABELS: Record<string, string> = { adult: 'Adult', ya: 'Young adult', kids: 'Kids' };
+const STATUS_LABELS: Record<string, string> = { read: 'Read', dnf: 'Did not finish', tbr: 'To be read', reading: 'Reading now' };
 const STAR_COUNT = 5;
 
 /**
@@ -16,7 +17,7 @@ const STAR_COUNT = 5;
  * @param {{book: Object}} props - The open book
  * @returns {React.ReactElement} Page content (fills its parent)
  */
-function SummaryPage({ book }) {
+function SummaryPage({ book }: { book: Book }) {
   return (<div className="paper left"><div className="paper-inner">
     <div className="pg-kicker">Summary</div>
     <div className="pg-title">{book.title}</div>
@@ -33,13 +34,13 @@ function SummaryPage({ book }) {
  * @param {{book: Object, allBooks: Object[], today: string}} props - The open book, the library, and today's date
  * @returns {React.ReactElement} Page content (fills its parent)
  */
-function StatsPage({ book, allBooks, today }) {
+function StatsPage({ book, allBooks, today }: { book: Book; allBooks: Book[]; today: string }) {
   const genre = SL.genreOf(book);
   const readDays = book.finishedAt && book.startedAt ? SL.daysBetween(book.startedAt, book.finishedAt) + 1 : 0;
   // Series dots: filled for volumes you have read, gold for this one
   const volumes = book.series && book.seriesTotal ? Array.from({ length: book.seriesTotal }, (_, i) => {
     const n = i + 1;
-    const mine = allBooks.find((b) => b.series === book.series && b.seriesNumber === n);
+    const mine = allBooks.find((b: Book) => b.series === book.series && b.seriesNumber === n);
     return n === book.seriesNumber ? 'here' : (mine && mine.status === 'read' ? 'have' : '');
   }) : [];
   return (<div className="paper right"><div className="paper-inner">

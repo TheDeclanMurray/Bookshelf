@@ -22,7 +22,7 @@ export default defineConfig({
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { globPatterns: ['**/*.{js,css,html,woff2,png,svg}'], maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
+      workbox: { globPatterns: ['**/*.{js,css,html,woff2,png,svg,webp}'], maximumFileSizeToCacheInBytes: 4 * 1024 * 1024 },
     }),
   ],
   server: { host: true, port: 5173 },     // host: true so the iPhone can open it over the LAN

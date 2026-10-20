@@ -1,4 +1,7 @@
 import { ShelfLogic } from './shelfLogic';
+import type { Book } from './types';
+
+type Sticker = { size: number; bg: string; text: string; ring: string };
 
 /**
  * spineLayout.js
@@ -33,7 +36,7 @@ const SpineLayout = (function () {
    * @returns {Object} Layout: style, bands, label, title, author, sticker (each null when absent)
    * @throws {RangeError} If width, height or unit is not positive
    */
-  function computeLayout({ book, width, height, unit = 1, sticker, isLight }) {
+  function computeLayout({ book, width, height, unit = 1, sticker, isLight }: { book: Book; width: number; height: number; unit?: number; sticker?: Sticker; isLight: boolean }) {
     if (!(width > 0) || !(height > 0) || !(unit > 0)) throw new RangeError(`bad spine size ${width}x${height} (unit ${unit})`);
     const genre = SL_LOCAL.genreOf(book);
     const style = genre.spineStyle;
@@ -42,11 +45,11 @@ const SpineLayout = (function () {
     const hasAuthor = widthUnits >= MIN_AUTHOR_WIDTH;
 
     // Vertical budget: decoration at the top, the title, the author, then sticker and bottom decoration
-    const top = (TOP_SPACE[style] || TOP_SPACE.plain) * u;
-    const bottom = (sticker ? sticker.size + STICKER_CLEARANCE : (BOTTOM_SPACE[style] || BOTTOM_SPACE.default)) * u;
+    const top = ((TOP_SPACE as Record<string, number>)[style] || TOP_SPACE.plain) * u;
+    const bottom = (sticker ? sticker.size + STICKER_CLEARANCE : ((BOTTOM_SPACE as Record<string, number>)[style] || BOTTOM_SPACE.default)) * u;
     const region = height - top - bottom;
     const surname = book.author.split(' ').pop();
-    const titleFit = (titleHeight) => titleHeight / (book.title.length * TITLE_CHAR_WIDTH);   // largest type that keeps the title on one line
+    const titleFit = (titleHeight: number) => titleHeight / (book.title.length * TITLE_CHAR_WIDTH);   // largest type that keeps the title on one line
 
     // Show the author only if the title still fits at a readable size next to it
     let authorH = hasAuthor ? Math.min(region * AUTHOR_SHARE, surname.length * AUTHOR_CHAR_UNITS * u) : 0;
@@ -84,7 +87,7 @@ const SpineLayout = (function () {
    * @param {{book: Object, width: number, height: number, unit: number, sticker?: Object, ratio: number}} input - What the picture depends on
    * @returns {string} Key
    */
-  function cacheKey({ book, width, height, unit, sticker, ratio }) {
+  function cacheKey({ book, width, height, unit, sticker, ratio }: { book: Book; width: number; height: number; unit: number; sticker?: Sticker; ratio: number | string }) {
     const content = JSON.stringify([book.title, book.author, book.genre, book.hue, book.series || '', book.seriesNumber || 0, sticker || null]);
     return `v${DESIGN_VERSION}|${book.id}|${width.toFixed(2)}x${height.toFixed(2)}@${unit.toFixed(3)}x${ratio}|${SL_LOCAL.hashString(content).toString(36)}`;
   }

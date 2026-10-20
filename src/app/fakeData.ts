@@ -1,4 +1,5 @@
 import { ShelfLogic } from './shelfLogic';
+import type { Book } from './types';
 
 /**
  * fakeData.js
@@ -9,6 +10,9 @@ import { ShelfLogic } from './shelfLogic';
  */
 const FakeData = (function () {
   'use strict';
+
+  type GenreRecipe = { adj: string[]; noun: string[]; pages: number[]; hue: number[] };
+  type SeriesDef = { name: string; author: string; genre: string; age: string; hue: number; total: number; pages: number[]; titles: string[]; statuses: string[] };
 
   const SL = ShelfLogic;
 
@@ -129,7 +133,7 @@ const FakeData = (function () {
    * @param {Array} list - Non-empty list
    * @returns {*} One item
    */
-  function pick(rand, list) {
+  function pick<T>(rand: () => number, list: T[]): T {
     return list[Math.floor(rand() * list.length)];
   }
 
@@ -138,7 +142,7 @@ const FakeData = (function () {
    * @param {number} ms - Milliseconds since the epoch
    * @returns {string} Date string
    */
-  function isoFromMs(ms) {
+  function isoFromMs(ms: number) {
     return new Date(ms).toISOString().slice(0, 10);
   }
 
@@ -149,8 +153,8 @@ const FakeData = (function () {
    * @param {Set<string>} used - Titles already taken (updated)
    * @returns {string} A new title
    */
-  function makeTitle(rand, genre, used) {
-    const recipe = GENRE_RECIPES[genre];
+  function makeTitle(rand: () => number, genre: string, used: Set<string>) {
+    const recipe = (GENRE_RECIPES as Record<string, GenreRecipe>)[genre];
     const patterns = ['The {a} {n}', 'A {a} {n}', 'The {n} of {p}', '{a} {n}'];
     for (let attempt = 0; attempt < 50; attempt++) {
       const title = pick(rand, patterns)
@@ -168,8 +172,8 @@ const FakeData = (function () {
    * @param {string} genre - Genre key
    * @returns {string} One or two sentences
    */
-  function makeSummary(rand, genre) {
-    return pick(rand, SUMMARY_LINES[genre] || SUMMARY_LINES.literary)
+  function makeSummary(rand: () => number, genre: string) {
+    return pick(rand, (SUMMARY_LINES as Record<string, string[]>)[genre] || SUMMARY_LINES.literary)
       .replace('{h}', pick(rand, FIRST_NAMES)).replace('{p}', pick(rand, PLACES));
   }
 
@@ -179,7 +183,7 @@ const FakeData = (function () {
    * @param {number} [finishMs] - Finish time; random when omitted
    * @returns {{startedAt: string, finishedAt: string}} YYYY-MM-DD dates
    */
-  function makeReadDates(rand, finishMs?: number) {
+  function makeReadDates(rand: () => number, finishMs?: number) {
     const finished = finishMs !== undefined ? finishMs : FIRST_READ_DAY + Math.floor(rand() * READ_SPAN_DAYS) * MS_PER_DAY;
     const started = finished - (4 + Math.floor(rand() * 26)) * MS_PER_DAY;   // 4 to 29 days earlier
     return { startedAt: isoFromMs(started), finishedAt: isoFromMs(finished) };
@@ -193,7 +197,7 @@ const FakeData = (function () {
    * @param {string} today - YYYY-MM-DD, used for the book currently being read
    * @returns {Object[]} Books
    */
-  function buildSeries(def, seriesIndex, today) {
+  function buildSeries(def: SeriesDef, seriesIndex: number, today: string) {
     const rand = SL.seededRandom('series:' + def.name);
     const baseFinish = FIRST_READ_DAY + (200 + seriesIndex * 120) * MS_PER_DAY;   // first book's finish date
     return def.titles.map((title, i) => {
@@ -213,7 +217,9 @@ const FakeData = (function () {
           book.notes = pick(rand, NOTE_LINES);
         }
       } else if (status === 'reading') {
-        book.startedAt = SL.todayIso(new Date(Date.parse(today + 'T00:00:00Z') - CURRENT_BOOK_DAYS_AGO * MS_PER_DAY));
+        const startMs = Date.parse(today + 'T00:00:00Z') - CURRENT_BOOK_DAYS_AGO * MS_PER_DAY;
+        const s = new Date(startMs);
+        book.startedAt = `${s.getUTCFullYear()}-${String(s.getUTCMonth() + 1).padStart(2, '0')}-${String(s.getUTCDate()).padStart(2, '0')}`;
       }
       return book;
     });
@@ -224,11 +230,11 @@ const FakeData = (function () {
    * @param {Set<string>} used - Titles already used (updated)
    * @returns {Object[]} Books
    */
-  function buildStandalones(used) {
-    const books = [];
+  function buildStandalones(used: Set<string>) {
+    const books: Book[] = [];
     STANDALONE_PLAN.forEach((plan, planIndex) => {
       const rand = SL.seededRandom(`plan:${planIndex}:${plan.genre}:${plan.status}`);
-      const recipe = GENRE_RECIPES[plan.genre];
+      const recipe = (GENRE_RECIPES as Record<string, GenreRecipe>)[plan.genre];
       for (let i = 0; i < plan.count; i++) {
         const youth = plan.age !== 'adult';
         const book = {
@@ -260,7 +266,7 @@ const FakeData = (function () {
    * @returns {Object[]} Every book in the example library
    */
   function buildFakeLibrary(today = SL.todayIso()) {
-    const used = new Set();
+    const used = new Set<string>();
     const series = SERIES_DEFS.flatMap((def, i) => buildSeries(def, i, today));
     series.forEach((book) => used.add(book.title));      // keep standalone titles from repeating series titles
     return series.concat(buildStandalones(used));

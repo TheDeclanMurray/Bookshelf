@@ -2,6 +2,20 @@
 
 _Last updated: 2026-10-19. Builds on `docs/ARCHITECTURE.md` and `docs/SCOPE.md`; this file only adds sequencing, the prototype port and open risks._
 
+### M1 progress
+- [x] M1a: prototype running locally as a Vite app with a Playwright smoke test
+- [x] M1b: TSX/TS conversion, Vitest port of unit tests, PWA manifest/icons, bundled fonts
+- [x] M1c (partial): `noImplicitAny: true` clean (64 tests pass); image assets split out of the JS bundle (310 kB gzip-105 kB, down from ~1.17 MB with embedded base64). `strict: true` deferred — 60+ strictNullChecks errors; see `tsconfig.json` TODO.
+- [ ] M1c (remaining): iPhone check of the installed PWA — checklist below.
+
+**iPhone PWA check (manual, needs device on the LAN):**
+1. Start dev server: `npm run dev` — note the LAN IP printed (e.g. `192.168.x.x:5173`)
+2. Open Safari on the iPhone, navigate to `http://<LAN-IP>:5173`
+3. Add to Home Screen (Share → Add to Home Screen)
+4. Launch from the Home Screen (standalone mode)
+5. Verify using `docs/RENDERING.md` checklist: spine fonts render, bookcase frames load, stand image loads, swipe track works, pull-out/turn/open animates, no opacity on the 3D book, photographed images are not shifted
+6. Turn off Wi-Fi on the device, reload — the offline shelf should still render from the service worker cache
+
 ## Summary
 Turn the Phase 0 prototype (`src/prototype/`, ~3.3k lines of global-script JS) into the real app at **bookshelf.thedeclanmurray.com**: sign in with Face ID, search and add books, and see them on the shelves exactly as the Artifact looks today. Single user for now; keys are already `USER#<id>`.
 

@@ -8,7 +8,7 @@ import { Bookcase } from './bookcase';
 import { BOOK_REST_DEG, MarbleStand, STAND_TILT_X_DEG, STAND_TURN_Y_DEG } from './stand3d';
 import { READING_BOOK_D, READING_BOOK_H, READING_BOOK_W, ReadingRoom, SCENE_ANCHOR_X, STAND_TOP_Y } from './readingRoom';
 import { BookStage } from './bookStage';
-import type { Book, Launch, PagerProps, ScreenFrameProps, SwipeTrackProps } from './types';
+import type { Book, Launch, PagerProps, Placed, ScreenFrameProps, SwipeTrackProps } from './types';
 
 /**
  * app.js
@@ -74,7 +74,7 @@ function SwipeTrack({ count, index, onIndex, vp, renderScreen }: SwipeTrackProps
   }, [index, vp.w]);
 
   /** After a drag: a short drag or a quick flick moves one screen; otherwise it springs back. */
-  const onDragEnd = (event, info) => {
+  const onDragEnd = (_event: PointerEvent, info: { offset: { x: number }; velocity: { x: number } }) => {
     const needed = SL.clamp(vp.w * SWIPE_DISTANCE_FRACTION, SWIPE_MIN_DISTANCE_PX, SWIPE_MAX_DISTANCE_PX);
     let direction = 0;                                    // +1 next screen, -1 previous
     if (info.offset.x < -needed || info.velocity.x < -SWIPE_FLICK_VELOCITY) direction = 1;
@@ -113,7 +113,7 @@ function Pager({ rooms, index, onIndex, showHint }: PagerProps) {
  * @param {Object} extras - {rotateX, rotateY, thicknessPx} for this kind of launch
  * @returns {{kind: string, corners: number[][], rect: {cx: number, cy: number, w: number, h: number}}} Measured screen corners (top-left, top-right, bottom-right, bottom-left) plus the extras
  */
-function launchFromElement(kind, element, extras) {
+function launchFromElement(kind: string, element: Element, extras: Record<string, unknown>) {
   const box = element.getBoundingClientRect();
   // A stand book has four marker points on its cover; a spine is a flat rectangle, so its own corners are used
   const markers = Array.from(element.querySelectorAll('.corner')) as Element[];
@@ -129,7 +129,7 @@ function launchFromElement(kind, element, extras) {
  * @param {string} bookId - Book id
  * @param {boolean} hidden - True to hide, false to show
  */
-function setSceneBookHidden(bookId, hidden) {
+function setSceneBookHidden(bookId: string, hidden: boolean) {
   document.querySelectorAll(`[data-book-id="${bookId}"]`).forEach((element) => element.classList.toggle('is-out', hidden));
 }
 
@@ -141,7 +141,7 @@ function App() {
   const vp = useViewport();
   const today = useMemo(() => SL.todayIso(), []);
   const books = useMemo(() => FakeData.buildFakeLibrary(today), [today]);
-  const [sortModes, setSortModes] = useState({});         // sort mode per group key
+  const [sortModes, setSortModes] = useState<Record<string, string>>({});   // sort mode per group key
   const roomCache = useRef(new Map());                 // room id -> {signature, room}: unchanged rooms keep the same object, so their bookcases are not redrawn
   const rooms = useMemo(() => SL.buildRooms(books, { sortModes }).map((room) => {
     const signature = SL.roomSignature(room);
@@ -158,13 +158,13 @@ function App() {
 
   useEffect(() => { const id = setTimeout(() => setShowHint(false), HINT_VISIBLE_MS); return () => clearTimeout(id); }, []);
 
-  const cycleSort = useCallback((groupKey) => setSortModes((current) => ({ ...current, [groupKey]: SL.nextSortMode(current[groupKey] || 'library') })), []);
-  const pickFromShelf = useCallback((book, element) => {
+  const cycleSort = useCallback((groupKey: string) => setSortModes((current) => ({ ...current, [groupKey]: SL.nextSortMode(current[groupKey] || 'library') })), []);
+  const pickFromShelf = useCallback((book: Book, element: Element) => {
     const launch = launchFromElement('shelf', element, { rotateX: 0, rotateY: 90, thicknessPx: element.getBoundingClientRect().width });
     setSceneBookHidden(book.id, true);
     setPicked({ book, launch });
   }, []);
-  const pickReading = useCallback((book, element) => {
+  const pickReading = useCallback((book: Book, element: Element) => {
     const box = element.getBoundingClientRect();
     const turn = Math.cos((STAND_TURN_Y_DEG * Math.PI) / 180);
     const onScreenScale = box.width / (READING_BOOK_W * turn);   // how big the book is on screen compared with its design size
@@ -178,7 +178,7 @@ function App() {
   const seriesStyles = useMemo(() => SL.buildSeriesStyles(books), [books]);
 
   /** Draws screen i: the reading room or a bookcase. */
-  const renderScreen = (i) => {
+  const renderScreen = (i: number) => {
     const room = rooms[i];
     const content = room.kind === 'reading'
       ? <ReadingRoom room={room} onPickReading={pickReading} today={today}  />
@@ -215,7 +215,7 @@ function StandRenderPage() {
  * @returns {React.ReactElement} The frame, drawn live so it can be photographed
  */
 function CaseRenderPage({ theme }: { theme: string }) {
-  const room = { id: 'render', kind: 'case', groupKey: 'render', title: '', theme, shelves: [], bookCount: 0, sortMode: 'library' };
+  const room = { id: 'render', kind: 'case', groupKey: 'render', title: '', theme, shelves: [] as Placed[][], bookCount: 0, sortMode: 'library' };
   return (<div style={{ position: 'absolute', left: CASE_RENDER_MARGIN_PX, top: CASE_RENDER_MARGIN_PX }}>
     <Bookcase room={room} frame="live" labels={false} onPick={null} onCycleSort={null}  />
   </div>);

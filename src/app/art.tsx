@@ -1,4 +1,5 @@
 import { SL, SeriesStyleContext, useContext, useEffect, useMemo, useState } from './reactSetup';
+import type { Book } from './types';
 import { SpineCache } from './spineCache';
 import { spineBitmapUrl } from './spineCanvas';
 
@@ -20,7 +21,7 @@ const COVER_STARS = [[24, 150, 1.4], [170, 140, 1.2], [60, 176, 1], [150, 168, 1
  * @param {number} hue - 0-360
  * @returns {{c1: string, c2: string, c3: string, dark: string, ink: string}} CSS colors
  */
-function coverPalette(hue) {
+function coverPalette(hue: number) {
   return {
     c1: `hsl(${hue}, 55%, 19%)`, c2: `hsl(${(hue + 22) % 360}, 58%, 36%)`,
     c3: `hsl(${(hue + 42) % 360}, 72%, 64%)`, dark: `hsl(${hue}, 50%, 9%)`, ink: '#f6ecd6',
@@ -32,7 +33,7 @@ function coverPalette(hue) {
  * @param {{genre: string, pal: Object}} props - Genre key and cover palette
  * @returns {React.ReactElement} SVG group
  */
-function CoverMotif({ genre, pal }) {
+function CoverMotif({ genre, pal }: { genre: string; pal: { ink: string; c1: string; c2: string; c3: string; dark: string } }) {
   const stars = COVER_STARS.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={pal.ink} opacity="0.7"  />);
   switch (genre) {
     case 'fantasy': return (<g>{stars}
@@ -86,7 +87,7 @@ function CoverMotif({ genre, pal }) {
  * @param {{book: Object, width: number, height: number}} props - Book and size in px (2:3 ratio expected)
  * @returns {React.ReactElement} Cover element
  */
-function CoverArt({ book, width, height }) {
+function CoverArt({ book, width, height }: { book: Book; width: number; height: number }) {
   const genre = SL.genreOf(book);
   const pal = coverPalette(book.hue);
   const titleSize = width * SL.clamp(0.14 - book.title.length * 0.0023, 0.075, 0.12) * genre.fontScale;   // longer titles get smaller type
@@ -110,7 +111,7 @@ function CoverArt({ book, width, height }) {
  *   spine size in px, px per design unit (1 on a shelf), and whether the picture may be saved in the browser
  * @returns {React.ReactElement} Image filling its parent
  */
-function SpineImage({ book, width, height, unit = 1, persist = true }) {
+function SpineImage({ book, width, height, unit = 1, persist = true }: { book: Book; width: number; height: number; unit?: number; persist?: boolean }) {
   const seriesStyles = useContext(SeriesStyleContext);
   const sticker = book.series && book.seriesNumber ? seriesStyles[book.series] : undefined;   // same for every volume
   const epoch = useSpineEpoch();                          // pictures are redrawn if the fonts arrive late

@@ -43,7 +43,7 @@ const FLOOR_Y = 246;                                      // bottom of the base,
  * @param {number[]} normal - Unit vector [x, y, z]; y is negative for upward-facing
  * @returns {number} AMBIENT_LIGHT up to 1
  */
-function lightAmount(normal) {
+function lightAmount(normal: number[]) {
   const facing = normal[0] * LIGHT_DIR[0] + normal[1] * LIGHT_DIR[1] + normal[2] * LIGHT_DIR[2];   // dot product
   return AMBIENT_LIGHT + (1 - AMBIENT_LIGHT) * Math.max(0, facing);
 }
@@ -54,7 +54,7 @@ function lightAmount(normal) {
  * @param {number} amount - 0 (shade) to 1 (full light)
  * @returns {string} rgb() color
  */
-function surfaceColor(tint, amount) {
+function surfaceColor(tint: string, amount: number) {
   const [dark, light] = tint === 'brass' ? [BRASS_SHADOW, BRASS_LIGHT] : [MARBLE_SHADOW, MARBLE_LIGHT];
   const mixed = dark.map((channel, i) => Math.round(channel + (light[i] - channel) * amount));
   return `rgb(${mixed[0]}, ${mixed[1]}, ${mixed[2]})`;
@@ -68,7 +68,7 @@ function surfaceColor(tint, amount) {
  * @param {number} y - Face height, continues veins from face to face
  * @returns {Object} Style properties
  */
-function flatPaint(tint, amount, seed, y) {
+function flatPaint(tint: string, amount: number, seed: number, y: number) {
   const color = surfaceColor(tint, amount);
   if (tint === 'brass') return { backgroundColor: color, backgroundImage: 'linear-gradient(90deg, rgba(255,255,255,.28), rgba(0,0,0,.2))' };
   return { backgroundColor: color, backgroundImage: 'var(--vein)', backgroundSize: `${VEIN_TILE_PX}px ${VEIN_TILE_PX}px`, backgroundPosition: `${-seed * 37}px ${-y}px` };
@@ -79,7 +79,7 @@ function flatPaint(tint, amount, seed, y) {
  * @param {{w: number, h: number, d: number, y: number, tint?: string, z?: number}} props - Size, top height, tint and z offset of its center
  * @returns {React.ReactElement} Faces
  */
-function Box3D({ w, h, d, y, tint = 'marble', z = 0 }) {
+function Box3D({ w, h, d, y, tint = 'marble', z = 0 }: { w: number; h: number; d: number; y: number; tint?: string; z?: number }) {
   const faces = [
     { id: 'front', fw: w, fh: h, top: y, t: `translateZ(${d / 2 + z}px)`, n: [0, 0, 1] },
     { id: 'right', fw: d, fh: h, top: y, t: `translateZ(${z}px) rotateY(90deg) translateZ(${w / 2}px)`, n: [1, 0, 0] },
@@ -97,7 +97,7 @@ function Box3D({ w, h, d, y, tint = 'marble', z = 0 }) {
  *   CSS image drawn once on every facet (used for egg-and-dart)
  * @returns {React.ReactElement} Facets
  */
-function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false, tint = 'marble', veins: withVeins = true, tile = '' }) {
+function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false, tint = 'marble', veins: withVeins = true, tile = '' }: { rTop: number; rBottom: number; h: number; y: number; facets?: number; fluted?: boolean; tint?: string; veins?: boolean; tile?: string }) {
   const half = Math.PI / facets;
   const slant = Math.hypot(h, rBottom - rTop);
   const tilt = Math.atan2(rBottom - rTop, h);             // positive when the part is narrower at the top
@@ -108,7 +108,7 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
   const topInset = (wMax - wTop - FACET_OVERLAP_PX) / 2;
   const bottomInset = (wMax - wBottom - FACET_OVERLAP_PX) / 2;
   const clip = `polygon(${topInset}px 0, calc(100% - ${topInset}px) 0, calc(100% - ${bottomInset}px) 100%, ${bottomInset}px 100%)`;
-  const lightAt = (degrees) => {
+  const lightAt = (degrees: number) => {
     const a = (degrees * Math.PI) / 180;
     return lightAmount([Math.sin(a) * Math.cos(tilt), -Math.sin(tilt), Math.cos(a) * Math.cos(tilt)]);
   };
@@ -117,7 +117,7 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
     const left = lightAt(theta - 180 / facets);            // light at this facet's left and right edges
     const right = lightAt(theta + 180 / facets);
     const mid = lightAt(theta);
-    const colorOf = (amount) => surfaceColor(tint, amount);
+    const colorOf = (amount: number) => surfaceColor(tint, amount);
     const gradient = fluted
       ? `linear-gradient(90deg, ${colorOf(left * 0.62)} 0%, ${colorOf(mid * 1.02)} 30%, ${colorOf(mid)} 62%, ${colorOf(right * 0.7)} 100%)`   // each flute is a shallow groove
       : `linear-gradient(90deg, ${colorOf(left)}, ${colorOf(right)})`;
@@ -138,7 +138,7 @@ function Frustum3D({ rTop, rBottom, h, y, facets = ROUND_FACETS, fluted = false,
  * @param {{r: number, y: number, tint?: string}} props - Radius, height, tint
  * @returns {React.ReactElement} Disc
  */
-function Disc3D({ r, y, tint = 'marble' }) {
+function Disc3D({ r, y, tint = 'marble' }: { r: number; y: number; tint?: string }) {
   return (<div className="f3" style={{ left: -r, top: y - r, width: 2 * r, height: 2 * r, borderRadius: '50%', transform: 'rotateX(90deg)',
     ...flatPaint(tint, lightAmount([0, -1, 0]), 7, y) }}  />);
 }
@@ -153,8 +153,8 @@ function Wedge3D() {
   const zMid = (BOOK_REST_Z + zBack) / 2;
   const sideTop = -WEDGE_BACK_H;
   const slopeNormal = [0, -Math.cos(Math.atan2(WEDGE_BACK_H, WEDGE_DEPTH)), Math.sin(Math.atan2(WEDGE_BACK_H, WEDGE_DEPTH))];
-  const sideClip = { right: 'polygon(0 100%, 100% 100%, 100% 0)', left: 'polygon(0 0, 0 100%, 100% 100%)' };
-  const side = (key, rotation, normal) => (<div key={key} className="f3 f3-edge" style={{ left: -WEDGE_DEPTH / 2, top: sideTop, width: WEDGE_DEPTH, height: WEDGE_BACK_H,
+  const sideClip: Record<string, string> = { right: 'polygon(0 100%, 100% 100%, 100% 0)', left: 'polygon(0 0, 0 100%, 100% 100%)' };
+  const side = (key: string, rotation: number, normal: number[]) => (<div key={key} className="f3 f3-edge" style={{ left: -WEDGE_DEPTH / 2, top: sideTop, width: WEDGE_DEPTH, height: WEDGE_BACK_H,
     transform: `translateZ(${zMid}px) rotateY(${rotation}deg) translateZ(${WEDGE_W / 2}px)`, clipPath: sideClip[key], WebkitClipPath: sideClip[key], ...flatPaint('marble', lightAmount(normal), 3, 0) }}  />);
   return (<React.Fragment>
     <div className="f3 f3-edge" style={{ left: -WEDGE_W / 2, top: sideTop, width: WEDGE_W, height: WEDGE_BACK_H, transform: `translateZ(${zBack}px) rotateY(180deg)`, ...flatPaint('marble', AMBIENT_LIGHT, 5, 0) }}  />

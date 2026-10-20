@@ -6,6 +6,9 @@
  * uses (move, scale, turn X, turn Y, then perspective) and adjusts the pose until they match
  * (Levenberg-Marquardt least squares). Pure math, no DOM: unit tested in src/tests/.
  */
+
+export type SolvePose = { [k: string]: number | undefined; x: number; y: number; scale: number; rotateX: number; rotateY: number; rotateZ?: number };
+
 const PoseSolver = (function () {
   'use strict';
 
@@ -20,7 +23,7 @@ const PoseSolver = (function () {
    * @param {number} degrees - Angle in degrees
    * @returns {number} Angle in radians
    */
-  function toRadians(degrees) {
+  function toRadians(degrees: number) {
     return (degrees * Math.PI) / 180;
   }
 
@@ -32,7 +35,7 @@ const PoseSolver = (function () {
    * @param {number} perspective - CSS perspective distance in px
    * @returns {number[]} [screenX, screenY]
    */
-  function projectPoint(point, pose, perspective) {
+  function projectPoint(point: number[], pose: { x: number; y: number; scale: number; rotateX: number; rotateY: number; rotateZ?: number }, perspective: number) {
     const [px, py, pz] = point;
     const cy = Math.cos(toRadians(pose.rotateY)), sy = Math.sin(toRadians(pose.rotateY));
     const cx = Math.cos(toRadians(pose.rotateX)), sx = Math.sin(toRadians(pose.rotateX));
@@ -57,8 +60,8 @@ const PoseSolver = (function () {
    * @param {number} perspective - CSS perspective distance in px
    * @returns {number[]} Flat list [x0, y0, x1, y1, ...]
    */
-  function projectCorners(corners, pose, perspective) {
-    return corners.flatMap((corner) => projectPoint(corner, pose, perspective));
+  function projectCorners(corners: number[][], pose: { x: number; y: number; scale: number; rotateX: number; rotateY: number; rotateZ?: number }, perspective: number) {
+    return corners.flatMap((corner: number[]) => projectPoint(corner, pose, perspective));
   }
 
   /**
@@ -67,7 +70,7 @@ const PoseSolver = (function () {
    * @param {number[]} vector - length n
    * @returns {(number[]|null)} Solution, or null if the matrix is singular
    */
-  function solveLinear(matrix, vector) {
+  function solveLinear(matrix: number[][], vector: number[]) {
     const n = vector.length;
     const a = matrix.map((row, i) => row.concat(vector[i]));   // augmented matrix
     for (let col = 0; col < n; col++) {
@@ -97,25 +100,25 @@ const PoseSolver = (function () {
    * @returns {{pose: Object, rms: number}} Best pose and the average corner error in px
    * @throws {RangeError} If targets do not match the corners, or no field is free
    */
-  function solvePose({ corners, targets, initial, free, perspective }) {
+  function solvePose({ corners, targets, initial, free, perspective }: { corners: number[][]; targets: number[]; initial: SolvePose; free: string[]; perspective: number }) {
     if (targets.length !== corners.length * 2 || free.length === 0) {
       throw new RangeError('need two target numbers per corner and at least one free parameter');
     }
-    const errorOf = (pose) => projectCorners(corners, pose, perspective).map((value, i) => value - targets[i]);
-    const rmsOf = (residual) => Math.sqrt(residual.reduce((sum, r) => sum + r * r, 0) / residual.length);
-    let pose = { ...initial };
+    const errorOf = (pose: SolvePose) => projectCorners(corners, pose, perspective).map((value: number, i: number) => value - targets[i]);
+    const rmsOf = (residual: number[]) => Math.sqrt(residual.reduce((sum: number, r: number) => sum + r * r, 0) / residual.length);
+    let pose: SolvePose = { ...initial };
     let residual = errorOf(pose);
     let damping = START_DAMPING;
     for (let iteration = 0; iteration < MAX_ITERATIONS && rmsOf(residual) > DONE_RMS_PX; iteration++) {
       // Jacobian by finite differences: how each corner coordinate responds to each free field
-      const columns = free.map((key) => errorOf({ ...pose, [key]: pose[key] + STEPS[key] }).map((value, i) => (value - residual[i]) / STEPS[key]));
-      const jtj = free.map((_, i) => free.map((__, j) => columns[i].reduce((sum, v, k) => sum + v * columns[j][k], 0)));
-      const jtr = free.map((_, i) => columns[i].reduce((sum, v, k) => sum + v * residual[k], 0));
-      const damped = jtj.map((row, i) => row.map((v, j) => (i === j ? v * (1 + damping) + 1e-9 : v)));
-      const step = solveLinear(damped, jtr.map((v) => -v));
+      const columns = free.map((key: string) => errorOf({ ...pose, [key]: (pose[key] ?? 0) + (STEPS as Record<string, number>)[key] }).map((value: number, i: number) => (value - residual[i]) / (STEPS as Record<string, number>)[key]));
+      const jtj = free.map((_: string, i: number) => free.map((__: string, j: number) => columns[i].reduce((sum: number, v: number, k: number) => sum + v * columns[j][k], 0)));
+      const jtr = free.map((_: string, i: number) => columns[i].reduce((sum: number, v: number, k: number) => sum + v * residual[k], 0));
+      const damped = jtj.map((row: number[], i: number) => row.map((v: number, j: number) => (i === j ? v * (1 + damping) + 1e-9 : v)));
+      const step = solveLinear(damped, jtr.map((v: number) => -v));
       if (!step) { damping *= 10; continue; }
-      const candidate = { ...pose };
-      free.forEach((key, i) => { candidate[key] = pose[key] + step[i]; });
+      const candidate: SolvePose = { ...pose };
+      free.forEach((key: string, i: number) => { candidate[key] = (pose[key] ?? 0) + step[i]; });
       const candidateResidual = errorOf(candidate);
       if (rmsOf(candidateResidual) < rmsOf(residual)) { pose = candidate; residual = candidateResidual; damping = Math.max(1e-6, damping / 3); }
       else damping *= 5;                                  // worse: take a smaller, safer step next time

@@ -1,7 +1,7 @@
 import { React, SL, isRealTap, memo, noteTapStart } from './reactSetup';
 import { SpineImage } from './art';
 import { CASE_FRAMES } from './caseAsset';
-import type { BookcaseProps, SpineButtonProps } from './types';
+import type { BookcaseProps, Placed, SpineButtonProps } from './types';
 
 /**
  * bookcase.js
@@ -51,7 +51,7 @@ function Pilaster() {
  */
 const SpineButton = memo(function SpineButton({ placed, onPick }: SpineButtonProps) {
   const { book, thickness, height } = placed;
-  const handleClick = (event) => {
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     if (!isRealTap(event)) return;                        // ignore the touch that ends a swipe
     onPick(book, event.currentTarget);
   };
@@ -74,7 +74,7 @@ function hasCaseFrames() {
  * @param {{theme: string}} props - Wood theme
  * @returns {React.ReactElement} Image placed behind the shelves
  */
-function CaseFrameImage({ theme }) {
+function CaseFrameImage({ theme }: { theme: string }) {
   const place = CASE_FRAMES.placement;
   return (<img className="case-frame" alt="" draggable="false" src={CASE_FRAMES.images[theme] || CASE_FRAMES.images.mahogany}
     style={{ left: place.left, top: place.top, width: place.width, height: place.height }}  />);
@@ -95,7 +95,7 @@ const Bookcase = memo(function Bookcase({ room, onPick, onCycleSort, frame = 'au
   const photo = frame === 'photo' || (frame === 'auto' && hasCaseFrames());
   const sortLabel = SL.SORT_MODES.find((m) => m.key === room.sortMode).label;
   // Pad to a full set of shelves so a nearly empty case still looks like furniture
-  const shelves = room.shelves.concat(Array.from({ length: SL.SHELVES_PER_CASE - room.shelves.length }, () => []));
+  const shelves = room.shelves.concat(Array.from({ length: SL.SHELVES_PER_CASE - room.shelves.length }, (): Placed[] => []));
   return (<div className={'case' + (photo ? ' is-photo' : '')} data-theme={room.theme}>
     {photo && <CaseFrameImage theme={room.theme}  />}
     <div className="crown">
