@@ -138,7 +138,7 @@ button { font: inherit; color: inherit; }
 .reading-title { font: 700 21px/1.2 var(--font-display); color: #f3ead7; letter-spacing: 0.04em; text-wrap: balance; }
 .reading-author { margin-top: 4px; font: italic 500 16px var(--font-body); color: var(--parchment-2); }
 .reading-meta { margin-top: 10px; font: 600 10px var(--font-display); letter-spacing: 0.22em; text-transform: uppercase; color: var(--brass); }
-.reading-empty { position: absolute; left: 30px; right: 30px; top: 300px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
+.reading-empty { position: absolute; left: 30px; right: 30px; top: 490px; text-align: center; font: italic 500 17px/1.5 var(--font-body); color: var(--parchment-2); }
 
 /* ------------------------------------------------------------------- stage */
 .stage { position: fixed; inset: 0; z-index: 50; touch-action: none; }
@@ -192,6 +192,114 @@ button { font: inherit; color: inherit; }
 
 @media (prefers-reduced-motion: reduce) {
   .tap-ring { animation: none; }
+}
+
+/* ----------------------------------------------------------------- BookForm */
+.bf-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(20,12,4,.55); backdrop-filter: blur(2px);
+  display: flex; align-items: flex-end;
+}
+.bf-sheet {
+  width: 100%; max-height: 92dvh; border-radius: 18px 18px 0 0;
+  background: #f5ede0; display: flex; flex-direction: column;
+  box-shadow: 0 -4px 32px rgba(0,0,0,.35);
+  font-family: var(--font-body);
+}
+.bf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px 14px; border-bottom: 1px solid rgba(98,73,47,.18); flex: none;
+}
+.bf-title { font: 700 1.05em var(--font-display); letter-spacing: 0.04em; color: var(--ink); }
+.bf-close {
+  width: 30px; height: 30px; border-radius: 50%; border: none;
+  background: rgba(98,73,47,.12); color: var(--ink-soft);
+  font-size: 0.82em; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.bf-body { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 18px; }
+.bf-footer {
+  display: flex; gap: 10px; padding: 14px 20px 28px; border-top: 1px solid rgba(98,73,47,.18);
+  flex: none;
+}
+
+.bf-label {
+  display: block; margin-bottom: 6px;
+  font: 600 0.68em var(--font-display); letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-soft);
+}
+.bf-req { color: #8a3a2a; }
+.bf-opt { font-weight: 400; letter-spacing: 0.06em; text-transform: none; }
+
+.bf-input {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1.5px solid rgba(98,73,47,.28); border-radius: 8px;
+  background: rgba(255,255,255,.7); color: var(--ink);
+  font: 500 1em var(--font-body); appearance: none;
+}
+.bf-input:focus { outline: none; border-color: #b5802a; background: #fff; }
+.bf-textarea { resize: vertical; min-height: 72px; }
+
+.bf-row { display: flex; gap: 12px; }
+.bf-field { display: flex; flex-direction: column; }
+.bf-field-grow { flex: 1; }
+.bf-field-half { flex: 1; }
+
+.bf-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.bf-pill {
+  padding: 6px 13px; border-radius: 100px; cursor: pointer;
+  border: 1.5px solid rgba(98,73,47,.3); background: transparent;
+  font: 600 0.78em var(--font-display); letter-spacing: 0.1em; color: var(--ink-soft);
+}
+.bf-pill.is-active { background: rgba(98,73,47,.12); border-color: rgba(98,73,47,.6); color: var(--ink); }
+.bf-pill-reading.is-active { border-color: #8a5a14; color: #8a5a14; background: rgba(138,90,20,.1); }
+.bf-pill-read.is-active   { border-color: #2f6b45; color: #2f6b45; background: rgba(47,107,69,.1); }
+.bf-pill-dnf.is-active    { border-color: #8a3a2a; color: #8a3a2a; background: rgba(138,58,42,.1); }
+.bf-pill-tbr.is-active    { border-color: #3d5a80; color: #3d5a80; background: rgba(61,90,128,.1); }
+
+.bf-stars { display: flex; align-items: center; gap: 4px; }
+.bf-star { background: none; border: none; cursor: pointer; font-size: 1.55em; color: rgba(98,73,47,.22); padding: 0; line-height: 1; }
+.bf-star.is-on { color: #b5802a; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+.bf-star-clear { background: none; border: none; cursor: pointer; font: 500 0.72em var(--font-display); color: var(--ink-soft); margin-left: 6px; text-decoration: underline; }
+
+.bf-hue-row { display: flex; align-items: center; gap: 12px; }
+.bf-hue-slider {
+  flex: 1; height: 14px; border-radius: 7px; border: none; cursor: pointer; appearance: none;
+  background: linear-gradient(to right, hsl(0,55%,45%), hsl(36,55%,45%), hsl(72,55%,45%), hsl(108,55%,45%), hsl(144,55%,45%), hsl(180,55%,45%), hsl(216,55%,45%), hsl(252,55%,45%), hsl(288,55%,45%), hsl(324,55%,45%), hsl(359,55%,45%));
+}
+.bf-hue-slider::-webkit-slider-thumb { appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; border: 2px solid rgba(0,0,0,.25); box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.bf-hue-swatch { width: 30px; height: 30px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); flex: none; }
+
+.bf-btn-save {
+  flex: 1; padding: 13px; border-radius: 10px; border: none; cursor: pointer;
+  background: #6b4226; color: #f5ede0;
+  font: 700 0.92em var(--font-display); letter-spacing: 0.1em;
+}
+.bf-btn-save:disabled { opacity: 0.45; cursor: default; }
+.bf-btn-delete {
+  padding: 13px 18px; border-radius: 10px; border: 1.5px solid rgba(138,58,42,.45); cursor: pointer;
+  background: transparent; color: #8a3a2a;
+  font: 600 0.88em var(--font-display); letter-spacing: 0.08em;
+}
+
+/* Book search within the add form */
+.bf-search-wrap { position: relative; }
+.bf-search-row { display: flex; align-items: center; gap: 8px; }
+.bf-search-row .bf-input { flex: 1; }
+.bf-search-spinner { color: var(--parchment-2); font-size: 0.9em; }
+.bf-search-results { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid rgba(98,73,47,.25); border-radius: 10px; overflow: hidden; background: #2a1f14; }
+.bf-search-results li + li { border-top: 1px solid rgba(98,73,47,.2); }
+.bf-search-result { width: 100%; text-align: left; background: none; border: none; cursor: pointer; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+.bf-search-result:active { background: rgba(255,255,255,.06); }
+.bf-sr-title { font: 600 14px/1.25 var(--font-display); color: #f3ead7; }
+.bf-sr-author { font: italic 500 12px var(--font-body); color: var(--parchment-2); }
+.bf-sr-series { font: 600 10px var(--font-display); letter-spacing: 0.15em; text-transform: uppercase; color: var(--brass); }
+
+/* Add-book FAB */
+.bf-fab {
+  position: fixed; bottom: 66px; right: 18px; z-index: 800;
+  width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer;
+  background: #6b4226; color: #f5ede0;
+  font-size: 1.5em; line-height: 1; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 12px rgba(0,0,0,.35);
 }
 
 /* renderStatic.mjs photographs the stand and the bookcase frames on a transparent background */

@@ -1,7 +1,8 @@
 import './fonts';
 import * as ReactDOM from 'react-dom/client';
 import './styles.css';
-import { FakeData } from './fakeData';
+import { useBooks } from './useBooks';
+import { BookForm } from './BookForm';
 import { DragGuard, MotionConfig, SL, SeriesStyleContext, animate, motion, useCallback, useEffect, useMemo, useMotionValue, useRef, useState } from './reactSetup';
 import { SpineCache } from './spineCache';
 import { Bookcase } from './bookcase';
@@ -140,8 +141,9 @@ function setSceneBookHidden(bookId: string, hidden: boolean) {
 function App() {
   const vp = useViewport();
   const today = useMemo(() => SL.todayIso(), []);
-  const books = useMemo(() => FakeData.buildFakeLibrary(today), [today]);
+  const { books, ready, saveBook, deleteBook } = useBooks();
   const [sortModes, setSortModes] = useState<Record<string, string>>({});   // sort mode per group key
+  const [formBook, setFormBook] = useState<import('./types').Book | null | undefined>(undefined); // undefined = closed, null = new
   const roomCache = useRef(new Map());                 // room id -> {signature, room}: unchanged rooms keep the same object, so their bookcases are not redrawn
   const rooms = useMemo(() => SL.buildRooms(books, { sortModes }).map((room) => {
     const signature = SL.roomSignature(room);
@@ -190,7 +192,19 @@ function App() {
     <SwipeTrack count={rooms.length} index={safeIndex} onIndex={setIndex} vp={vp} renderScreen={renderScreen}  />
     <Pager rooms={rooms} index={safeIndex} onIndex={setIndex} showHint={showHint}  />
     {picked && (<BookStage key={picked.book.id} book={picked.book} allBooks={books} today={today} launch={picked.launch} vp={vp}
-      onReturning={() => setSceneBookHidden(picked.book.id, false)} onClose={() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }}  />)}
+      onReturning={() => setSceneBookHidden(picked.book.id, false)}
+      onClose={() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }}  />)}
+    {ready && !picked && (
+      <button className="bf-fab" aria-label="Add a book" onClick={() => setFormBook(null)}>+</button>
+    )}
+    {formBook !== undefined && (
+      <BookForm
+        book={formBook ?? undefined}
+        onSave={saveBook}
+        onDelete={formBook ? (id) => deleteBook(id) : undefined}
+        onClose={() => setFormBook(undefined)}
+      />
+    )}
   </div></SeriesStyleContext.Provider></MotionConfig>);
 }
 
