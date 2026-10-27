@@ -23,3 +23,6 @@ logs/
 dist/
 test-results/
 playwright-report/
+
+# Ephemeral session state
+.claude/handoff.md

@@ -1,4 +1,21 @@
 services:
+  # Dev: Vite dev server with hot reload. Source is mounted so changes are picked up instantly.
+  # Run: docker compose up dev
+  dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.js:/app/vite.config.js
+      - ./frontend/tsconfig.json:/app/tsconfig.json
+
+  # Prod: nginx serving the built static files (used for Pi hosting).
+  # Run: docker compose up frontend
   frontend:
     build:
       context: ./frontend

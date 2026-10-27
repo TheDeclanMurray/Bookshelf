@@ -193,7 +193,8 @@ function App() {
     <Pager rooms={rooms} index={safeIndex} onIndex={setIndex} showHint={showHint}  />
     {picked && (<BookStage key={picked.book.id} book={picked.book} allBooks={books} today={today} launch={picked.launch} vp={vp}
       onReturning={() => setSceneBookHidden(picked.book.id, false)}
-      onClose={() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }}  />)}
+      onClose={() => { setSceneBookHidden(picked.book.id, false); setPicked(null); }}
+      onEdit={() => setFormBook(picked.book)}  />)}
     {ready && !picked && (
       <button className="bf-fab" aria-label="Add a book" onClick={() => setFormBook(null)}>+</button>
     )}

@@ -1,15 +1,18 @@
 # Phase 1: Books MVP — plan
 
-_Last updated: 2026-10-19. Builds on `docs/ARCHITECTURE.md` and `docs/SCOPE.md`; this file only adds sequencing, the prototype port and open risks._
+_Last updated: 2026-10-26. Builds on `docs/ARCHITECTURE.md` and `docs/SCOPE.md`; this file only adds sequencing, the prototype port and open risks._
 
-### M1 progress
+### Hosting and auth decisions (2026-10-26)
+- **Hosting deferred:** M2 (CloudFront/custom domain) and M8 (CI/CD) pushed until backend is working. Pi serves the frontend via Docker; iPhone accesses over LAN/Tailscale. AWS backend (API Gateway, Lambda, DynamoDB) accessed directly.
+- **Auth deferred:** M3 (Cognito passkeys, Face ID, multi-user) pushed to go alongside the hosting update. For now: single hardcoded user (`USER#dmurray`), no login screen, no JWT. The DynamoDB key prefix stays `USER#<id>` so no migration is needed when auth lands.
+
+### M1 progress — DONE ✓
 - [x] M1a: prototype running locally as a Vite app with a Playwright smoke test
 - [x] M1b: TSX/TS conversion, Vitest port of unit tests, PWA manifest/icons, bundled fonts
-- [x] M1c (partial): `noImplicitAny: true` clean (64 tests pass); image assets split out of the JS bundle (310 kB gzip-105 kB, down from ~1.17 MB with embedded base64). `strict: true` deferred — 60+ strictNullChecks errors; see `tsconfig.json` TODO.
-- [ ] M1c (remaining): iPhone check of the installed PWA — checklist below.
+- [x] M1c: `noImplicitAny: true` clean (64 tests pass); image assets split out of the JS bundle (310 kB gzip → 105 kB, down from ~1.17 MB with embedded base64); iPhone PWA check passed. (`strict: true` deferred — 60+ strictNullChecks errors; see `tsconfig.json` TODO.)
 
 **iPhone PWA check (manual, needs device on the LAN):**
-1. Start dev server: `npm run dev` — note the LAN IP printed (e.g. `192.168.x.x:5173`)
+1. Start dev server: `docker compose up dev` from the repo root — note the LAN IP printed (e.g. `192.168.x.x:5173`). Source files are mounted so edits are picked up without restarting the container. (Fallback: `npm run dev` from `frontend/`, but prefer Docker to avoid orphan processes.)
 2. Open Safari on the iPhone, navigate to `http://<LAN-IP>:5173`
 3. Add to Home Screen (Share → Add to Home Screen)
 4. Launch from the Home Screen (standalone mode)

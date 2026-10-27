@@ -6,6 +6,7 @@
   "scripts": {
     "test": "vitest run",
     "build:prototype": "node ../src/prototype/build.mjs",
+    "build:movies": "node ../src/prototype/build-movies.mjs",
     "render:static": "node ../src/prototype/renderStatic.mjs",
     "dev": "vite",
     "build": "vite build",

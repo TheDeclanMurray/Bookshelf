@@ -43,7 +43,8 @@ function StatsPage({ book, allBooks, today }: { book: Book; allBooks: Book[]; to
     const mine = allBooks.find((b: Book) => b.series === book.series && b.seriesNumber === n);
     return n === book.seriesNumber ? 'here' : (mine && mine.status === 'read' ? 'have' : '');
   }) : [];
-  return (<div className="paper right"><div className="paper-inner">
+  return (<div className="paper right">
+    <div className="paper-inner">
     <div className="pg-kicker">Your reading</div>
     {book.rating > 0
       ? (<div className="stars" aria-label={`${book.rating} out of ${STAR_COUNT} stars`}>{Array.from({ length: STAR_COUNT }, (_, i) =>

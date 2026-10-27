@@ -109,10 +109,11 @@ function buildPoses(geo: { launchPose: SolvePose; W: number; openScale: number; 
  *   onReturning runs when the put-back motion starts (the stand shows its book again); onClose runs once the book is back in place
  * @returns {React.ReactElement} Stage overlay
  */
-function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }: { book: Book; allBooks: Book[]; today: string; launch: Launch; vp: Viewport; onReturning: () => void; onClose: () => void }) {
+function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose, onEdit }: { book: Book; allBooks: Book[]; today: string; launch: Launch; vp: Viewport; onReturning: () => void; onClose: () => void; onEdit?: () => void }) {
   const isShelf = launch.kind === 'shelf';
   const [hint, setHint] = useState('');
   const [pagesReady, setPagesReady] = useState(false);    // the printed pages mount after the pull-out, so they cost nothing during it
+  const [isOpen, setIsOpen] = useState(false);            // true once the cover is fully open, so the edit button can appear
   const phaseRef = useRef('launching');                   // launching | display | opening | open | closing
   const poseRef = useRef(null);                           // moves, scales and turns the whole book
   const liftRef = useRef(null);                           // swings the book toward you and back
@@ -218,6 +219,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }: 
     if (was === 'closing') return;
     phaseRef.current = 'closing';
     setHint('');
+    setIsOpen(false);
     if (was === 'open' || was === 'opening') {
       const atRest = was === 'open';
       playMotionTo(hingeRef.current, { transform: COVER_CLOSED }, { duration: COVER_CLOSE_MS, easing: EASE_IN_OUT, from: atRest ? { transform: COVER_OPEN } : undefined });
@@ -238,7 +240,7 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }: 
       playMotion(hingeRef.current, [{ transform: COVER_CLOSED }, { transform: COVER_OPEN }], { duration: OPEN_MS, easing: EASE_OPEN }),
       playMotion(poseRef.current, [{ transform: displayT }, { transform: openT }], { duration: OPEN_MS, easing: EASE_OPEN }),
     ]).then(([swung]) => {
-      if (swung && phaseRef.current === 'opening') { phaseRef.current = 'open'; setHint(HINT_CLOSE); }
+      if (swung && phaseRef.current === 'opening') { phaseRef.current = 'open'; setHint(HINT_CLOSE); setIsOpen(true); }
     });
   }, [displayT, openT]);
 
@@ -256,6 +258,21 @@ function BookStage({ book, allBooks, today, launch, vp, onReturning, onClose }: 
     </div>
     </div>
     <div className="stage-hint">{hint}</div>
+    {isOpen && onEdit && (
+      <button
+        className="stage-edit"
+        style={{
+          right: Math.max(8, vp.w - (anchorX + openScale * W) + 8),
+          top: Math.max(8, anchorY - (openScale * H) / 2 + 8),
+        }}
+        aria-label="Edit book"
+        onClick={(e) => { e.stopPropagation(); onEdit(); }}
+      >
+        <svg width="1.4em" height="1.4em" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="currentColor" d="M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.84 1.83 3.75 3.75 1.84-1.83ZM3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/>
+        </svg>
+      </button>
+    )}
   </div>);
 }
 

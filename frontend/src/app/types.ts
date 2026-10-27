@@ -19,6 +19,10 @@ export interface Book {
   age: Age | string;
   status: Status | string;
   hue: number;
+  spineSaturation?: number;  // 0-100, default 55
+  spineLightness?: number;   // 0-100, default 42
+  spineTextColor?: string;
+  coverUrl?: string;
   summary: string;
   notes: string;
   rating: number;
