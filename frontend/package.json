@@ -5,8 +5,8 @@
   "description": "Personal media tracker styled as an ornate library",
   "scripts": {
     "test": "vitest run",
-    "build:prototype": "node src/prototype/build.mjs",
-    "render:static": "node src/prototype/renderStatic.mjs",
+    "build:prototype": "node ../src/prototype/build.mjs",
+    "render:static": "node ../src/prototype/renderStatic.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --host",

@@ -7,9 +7,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { buildPage, findDuplicateNames } from '../prototype/build.mjs';
+import { buildPage, findDuplicateNames } from '../../../src/prototype/build.mjs';
 
-const PROTOTYPE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'prototype');
+const PROTOTYPE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'src', 'prototype');
 
 test('the real prototype sources build with no duplicate top-level names', () => {
   const page = buildPage(PROTOTYPE_DIR);

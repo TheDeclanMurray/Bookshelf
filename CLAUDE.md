@@ -12,8 +12,10 @@ A personal media tracker that looks like an ornate, old library, as a PWA for iP
 ## File & Folder Structure
 - `docs/`: architecture, scope, decisions, issues, TODO
 - `src/prototype/`: Phase 0 prototype source (logic, fake data, UI files, `build.mjs`) and the built `bookshelf-prototype.html`
-- `src/app/`: real application code (Phase 1 port of the prototype: TypeScript/TSX modules, `noImplicitAny` off for now, shared types in `types.ts`). Run with `npm run dev`; entry is `index.html` -> `src/app/app.tsx`
-- `src/tests/`: unit and integration tests
+- `frontend/`: real application code (Phase 1 port of the prototype). Run with `npm run dev` from this directory; entry is `index.html` -> `src/app/app.tsx`
+  - `frontend/src/app/`: TypeScript/TSX modules, shared types in `types.ts`
+  - `frontend/src/tests/`: unit and integration tests
+  - `frontend/Dockerfile` + root `docker-compose.yml`: Docker setup for dev testing (e.g. on the Raspberry Pi)
 - `infra/`: Terraform (to be added in Phase 1)
 - `logs/`: runtime logs (gitignored)
 
@@ -23,9 +25,9 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 - Cognito issues the JWTs that the API checks.
 
 ## Test Files
-- UnitTests: `src/tests/unit/*.test.js` (Vitest; logic and fake data for `src/app`) — run with: `npm test`; type check with `npm run typecheck`
-- Prototype build test: `src/tests/build.test.mjs` — run with: `npm run test:prototype`
-- IntegrationTests: `src/tests/e2e/` — run with: `npm run e2e` (set `CHROMIUM_PATH` if the browser is not Playwright's own)
+- UnitTests: `frontend/src/tests/unit/*.test.js` (Vitest; logic and fake data for `frontend/src/app`) — run with: `npm test` from `frontend/`; type check with `npm run typecheck`
+- Prototype build test: `frontend/src/tests/build.test.mjs` — run with: `npm run test:prototype` from `frontend/`
+- IntegrationTests: `frontend/src/tests/e2e/` — run with: `npm run e2e` from `frontend/` (set `CHROMIUM_PATH` if the browser is not Playwright's own)
 
 ## Progress
 - [x] Planning and architecture docs
@@ -52,7 +54,7 @@ The PWA (IndexedDB cache) calls API Gateway, which calls Lambdas, which read and
 - All DynamoDB keys are prefixed with `USER#<id>` so more users can be added without a migration.
 
 ## Prototype notes
-- Edit files in `src/prototype/`, then run `npm run build:prototype` and republish `bookshelf-prototype.html` as an Artifact.
+- Edit files in `src/prototype/`, then run `npm run build:prototype` (from `frontend/`) and republish `bookshelf-prototype.html` as an Artifact.
 - The stand's column and the bookcase frames are photographs. After changing `ionic.js`, `stand3d.js`, `texture.js`, `bookcase.js` or the bookcase CSS, run `npm run build:prototype && npm run render:static && npm run build:prototype` (needs Playwright; see the header of `renderStatic.mjs`). `standAsset.js`, `caseAsset.js` and `assets/*.webp` are generated and committed.
 - Spines are drawn once on a canvas and cached in the browser (`spineLayout.js`, `spineCanvas.js`, `spineCache.js`). Bump `DESIGN_VERSION` in `spineLayout.js` when the spine design changes.
 - The book's pull-out and put-back use the Web Animations API (`stageMotion.js`); Framer Motion only drives the swipe track. Never animate `opacity` on the 3D book: it flattens it.

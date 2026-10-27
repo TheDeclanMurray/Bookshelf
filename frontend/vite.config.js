@@ -26,4 +26,5 @@ export default defineConfig({
     }),
   ],
   server: { host: true, port: 5173 },     // host: true so the iPhone can open it over the LAN
+  preview: { host: true, port: 4173, allowedHosts: true },
 });

@@ -57,3 +57,6 @@
 | 2026-10-19 | App URL is bookshelf.thedeclanmurray.com on the user's personal AWS account, all in us-east-1 | User's domain and account; CloudFront certificates must be in us-east-1, so one region keeps it simple |
 | 2026-10-19 | Phase 1 is single-user with no Goodreads import | User decision; data model keeps USER# keys for later |
 | 2026-10-19 | Phase 1 ports the prototype to Vite/React/TS modules (TSX instead of htm, npm instead of CDNs, bundled fonts) without redesigning it | The Artifact is the approved look; see docs/PHASE-1.md |
+| 2026-10-19 | App code moved to a `frontend/` subdirectory; root holds `docker-compose.yml` and project-level config | Separates frontend from future `infra/` and makes the Docker context clean |
+| 2026-10-19 | Docker + Compose added for dev testing (contradicts the earlier "No Docker" entry, which referred to production) | Corporate MDM on the dev laptop blocks Tailscale inbound connections even with a manual firewall rule, making direct iPhone testing impossible. Docker lets the app be built and served on the Raspberry Pi over Tailscale instead |
+| 2026-10-19 | Build Docker images on the Raspberry Pi (not cross-compiled on the dev machine) | Pi is ARM64; cross-compiling with buildx and QEMU works but adds setup friction. Building directly on the Pi is simpler for now |
